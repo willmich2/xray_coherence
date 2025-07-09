@@ -29,7 +29,7 @@ source = gaussian_source(rsrc, sim_params)
 
 U_z = propagate_z(source, z, sim_params)
 
-print("propagation complete test")
+print("propagation complete successfully")
 
 # save U_z as npy file
 np.save("/home/gridsan/wmichaels/xray-coherence-sim/U_z.npy", U_z.cpu().numpy())
