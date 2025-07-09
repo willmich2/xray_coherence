@@ -1,5 +1,5 @@
-import numpy as np
-import torch
+import numpy as np # type: ignore
+import torch # type: ignore
 from simparams import SimParams
 from propagation import propagate_z
 from sources import gaussian_source
@@ -29,7 +29,7 @@ source = gaussian_source(rsrc, sim_params)
 
 U_z = propagate_z(source, z, sim_params)
 
-print("propagation complete")
+print("propagation complete test")
 
 # save U_z as npy file
 np.save("/home/gridsan/wmichaels/xray-coherence-sim/U_z.npy", U_z.cpu().numpy())
