@@ -1,4 +1,4 @@
-import torch
+import torch # type: ignore
 import cupy as cp # type: ignore
 import cupyx.scipy.sparse.linalg as linalg # type: ignore
 

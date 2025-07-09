@@ -1,0 +1,64 @@
+import torch # type: ignore
+from propagation import propagate_z, apply_element
+from sources import plane_wave
+from elements import ArbitraryElement
+from simparams import SimParams
+from montecarlo import mc_propagate
+
+
+def propagate_z_arbg_z(
+    U_init: torch.Tensor, 
+    z: float, 
+    sim_params: SimParams, 
+    element: ArbitraryElement
+    ) -> torch.Tensor:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    """
+    Uz = propagate_z(U_init, z, sim_params)
+    Uzg = apply_element(Uz, element, sim_params)
+    Uzgz = propagate_z(Uzg, z, sim_params)
+    return Uzgz
+
+
+def forward_model_focus_plane_wave(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    elem_params: dict,
+    forward_model_args: dict,
+    z: float, 
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the visibility of the output field.
+    """
+    element = ArbitraryElement(
+        name="ArbitraryElement", 
+        thickness=elem_params["thickness"], 
+        n_elem=elem_params["n_elem"], 
+        n_gap=elem_params["n_gap"], 
+        x=x
+    )
+
+    U_out_mc = mc_propagate(
+        u_init_func=plane_wave, 
+        u_init_func_args=(), # no arguments for plane wave
+        prop_func=propagate_z_arbg_z,
+        prop_func_args=(element,),
+        n=1,
+        z=z, 
+        sim_params=sim_params
+        )
+
+    Ncenter = forward_model_args["Ncenter"]
+    Navg = forward_model_args["Navg"]
+    I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
+    
+    I_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].mean()
+    I_out_edge = torch.cat((I_out[:Navg], I_out[-Navg:])).mean()
+    
+    visibility = (I_out_center - I_out_edge) / (I_out_center + I_out_edge)
+
+    obj = visibility
+
+    return obj

@@ -1,7 +1,8 @@
-import torch
+import torch # type: ignore
+from simparams import SimParams
 torch.pi = torch.acos(torch.zeros(1)).item() * 2
 
-def gaussian_source(rsrc, params):
+def gaussian_source(params: SimParams, rsrc: float) -> torch.Tensor:
   # Gaussian source
     U_init = torch.zeros((params.Ny, params.Nx), dtype=torch.complex64, device=params.device)
     R_sq = params.X**2 + params.Y**2
@@ -9,7 +10,7 @@ def gaussian_source(rsrc, params):
 
     return U_init
 
-def plane_wave(params):
+def plane_wave(params: SimParams) -> torch.Tensor:
     U_init = torch.ones((params.Ny, params.Nx), dtype=torch.complex64, device=params.device)
 
     return U_init

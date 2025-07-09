@@ -3,18 +3,20 @@ import numpy as np # type: ignore
 from simparams import SimParams
 
 class ArbitraryElement:
-    def __init__(self, name: str, thickness: float, n_elem: complex, n_gap: complex):
+    def __init__(self, name: str, thickness: float, n_elem: complex, n_gap: complex, x: torch.Tensor):
         self.name = name
         self.thickness = thickness
         self.n_elem = n_elem
         self.n_gap = n_gap
+        self.x = x
 
     def __str__(self):
         return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
 
     def transmission(self, lam: float, n_elem: complex, n_gap: complex, params: SimParams):
-        pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device))
-        return torch.exp(1j * 2*pi * n_elem * self.thickness / lam)
+        n_eff = n_elem * self.x + n_gap * (1 - self.x)
+        k0 = 2*np.pi / lam
+        return torch.exp(1j * k0 * n_eff * self.thickness)
 
 
 class ZonePlate:
