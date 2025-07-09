@@ -1,5 +1,5 @@
-import torch
-import torch.nn.functional as F
+import torch # type: ignore
+import torch.nn.functional as F # type: ignore
 
 
 def angular_spectrum_propagation(U, lam, z, dx, device):
@@ -83,3 +83,17 @@ def unpad_half_width(x: torch.Tensor) -> torch.Tensor:
     W = x.shape[-1] // 2
     start = (x.shape[-1] - W) // 2                  # == W//2
     return x[..., :, start : start + W]
+
+
+def apply_element(U, element, params):
+    U_f = torch.zeros((params.Ny, params.Nx), dtype=torch.complex64, device=params.device)
+
+    for lam in params.lams:
+        U_lam = torch.zeros((params.Ny, params.Nx), dtype=torch.complex64, device=params.device)
+        transmission = element.transmission(lam, element.n_elem, element.n_gap, params)
+        U *= transmission
+        U_f += U_lam
+    return U_f
+
+
+    
