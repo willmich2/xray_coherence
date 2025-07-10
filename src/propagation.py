@@ -2,7 +2,14 @@ import torch # type: ignore
 import torch.nn.functional as F # type: ignore
 from src.simparams import SimParams
 
-def angular_spectrum_propagation(U, lam, z, dx, device):
+def angular_spectrum_propagation(
+    U: torch.Tensor, 
+    lam: float, 
+    z: float, 
+    dx: float, 
+    device: torch.device
+    ) -> torch.Tensor:
+    
     U_padded = pad_double_width(U)
 
     Ny_padded, Nx_padded = U_padded.shape
@@ -26,15 +33,15 @@ def angular_spectrum_propagation(U, lam, z, dx, device):
     return U_z
 
 def propagate_z(
-    u_init: torch.Tensor, 
+    U: torch.Tensor, 
     z: float, 
-    params: SimParams
+    sim_params: SimParams
     ) -> torch.Tensor:
     
-    Uz = torch.zeros((params.Ny, params.Nx), dtype=torch.complex64, device=params.device)
+    Uz = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
     
-    for weight, lam in zip(params.weights, params.lams):
-        Uz_lam = angular_spectrum_propagation(u_init, lam, z, params.dx, params.device)
+    for weight, lam in zip(sim_params.weights, sim_params.lams):
+        Uz_lam = angular_spectrum_propagation(U, lam, z, sim_params.dx, sim_params.device)
         Uz += Uz_lam*weight
     return Uz
 
@@ -90,11 +97,15 @@ def unpad_half_width(x: torch.Tensor) -> torch.Tensor:
     return x[..., :, start : start + W]
 
 
-def apply_element(U, element, params):
-    U_f = torch.zeros((params.Ny, params.Nx), dtype=torch.complex64, device=params.device)
+def apply_element(
+    U: torch.Tensor, 
+    element, 
+    sim_params: SimParams
+    ) -> torch.Tensor:
+    U_f = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
     
-    for weight, lam in zip(params.weights, params.lams):
-        transmission = element.transmission(lam, element.n_elem, element.n_gap, params)
+    for weight, lam in zip(sim_params.weights, sim_params.lams):
+        transmission = element.transmission(lam, element.n_elem, element.n_gap, sim_params)
         U_lam = U * transmission
         U_f += U_lam * weight
     return U_f
