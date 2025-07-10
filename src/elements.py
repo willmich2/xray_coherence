@@ -1,15 +1,16 @@
 import torch # type: ignore
 import numpy as np # type: ignore
+from dataclasses import dataclass 
 from src.simparams import SimParams
 torch.pi = torch.acos(torch.zeros(1)).item() * 2
 
+@dataclass
 class ArbitraryElement:
-    def __init__(self, name: str, thickness: float, n_elem: complex, n_gap: complex, x: torch.Tensor):
-        self.name = name
-        self.thickness = thickness
-        self.n_elem = n_elem
-        self.n_gap = n_gap
-        self.x = x
+    name: str
+    thickness: float
+    n_elem: complex
+    n_gap: complex
+    x: torch.Tensor
 
     def __str__(self):
         return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
@@ -23,17 +24,16 @@ class ArbitraryElement:
         
         return torch.exp(1j * k0 * n_eff * self.thickness)
 
-
+@dataclass
 class ZonePlate:
-    def __init__(self, name: str, thickness: float, n_bar: complex, n_gap: complex, f: float):
-        self.name = name
-        self.thickness = thickness
-        self.n_bar = n_bar
-        self.n_gap = n_gap
-        self.f = f
+    name: str
+    thickness: float
+    n_elem: complex
+    n_gap: complex
+    f: float
 
     def __str__(self):
-        return f"ZonePlate(name={self.name}, thickness={self.thickness}, n_bar={self.n_bar}, n_gap={self.n_gap})"
+        return f"ZonePlate(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
     
     def transmission(self, lam: float, n_elem: complex, n_gap: complex, params: SimParams):
         pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device))

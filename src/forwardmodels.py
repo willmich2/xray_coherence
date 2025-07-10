@@ -7,7 +7,7 @@ from src.montecarlo import mc_propagate
 
 
 def propagate_z_arbg_z(
-    U_init: torch.Tensor, 
+    U: torch.Tensor, 
     z: float, 
     sim_params: SimParams, 
     element: ArbitraryElement
@@ -15,7 +15,7 @@ def propagate_z_arbg_z(
     """
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
     """
-    Uz = propagate_z(U_init, z, sim_params)
+    Uz = propagate_z(U, z, sim_params)
     Uzg = apply_element(Uz, element, sim_params)
     Uzgz = propagate_z(Uzg, z, sim_params)
     return Uzgz
