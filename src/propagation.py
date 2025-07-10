@@ -1,6 +1,6 @@
 import torch # type: ignore
 import torch.nn.functional as F # type: ignore
-from simparams import SimParams
+from src.simparams import SimParams
 
 def angular_spectrum_propagation(U, lam, z, dx, device):
     U_padded = pad_double_width(U)
@@ -92,12 +92,11 @@ def unpad_half_width(x: torch.Tensor) -> torch.Tensor:
 
 def apply_element(U, element, params):
     U_f = torch.zeros((params.Ny, params.Nx), dtype=torch.complex64, device=params.device)
-
-    for lam in params.lams:
-        U_lam = torch.zeros((params.Ny, params.Nx), dtype=torch.complex64, device=params.device)
+    
+    for weight, lam in zip(params.weights, params.lams):
         transmission = element.transmission(lam, element.n_elem, element.n_gap, params)
-        U *= transmission
-        U_f += U_lam
+        U_lam = U * transmission
+        U_f += U_lam * weight
     return U_f
 
 

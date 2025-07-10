@@ -32,6 +32,6 @@ def heaviside_projection(x, beta=10.0, eta=0.5):
     Projects continuous x in [0,1] (approximately) 
     into near-binary values using a smooth approximation of a step function.
     """    
-    numerator = torch.tanh(beta * (x - eta)) + np.tanh(beta * eta)
-    denominator = np.tanh(beta * (1 - eta)) + np.tanh(beta * eta)
+    numerator = torch.tanh(beta * (x - eta)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=torch.float32, requires_grad=True))
+    denominator = torch.tanh(torch.tensor(beta * (1 - eta), device=x.device, dtype=torch.float32, requires_grad=True)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=torch.float32, requires_grad=True))
     return numerator / denominator

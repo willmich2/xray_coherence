@@ -45,3 +45,5 @@ opt_x = threshold_opt(
     max_eval_per_stage=500, 
     x_init=np.random.uniform(size=sim_params.Nx)
     )
+
+print(f"opt_x: {opt_x}")

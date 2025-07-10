@@ -1,5 +1,5 @@
 import torch # type: ignore
-from simparams import SimParams
+from src.simparams import SimParams
 torch.pi = torch.acos(torch.zeros(1)).item() * 2
 
 def gaussian_source(params: SimParams, rsrc: float) -> torch.Tensor:

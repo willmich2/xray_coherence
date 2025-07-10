@@ -1,6 +1,7 @@
 import torch # type: ignore
 import numpy as np # type: ignore
-from simparams import SimParams
+from src.simparams import SimParams
+torch.pi = torch.acos(torch.zeros(1)).item() * 2
 
 class ArbitraryElement:
     def __init__(self, name: str, thickness: float, n_elem: complex, n_gap: complex, x: torch.Tensor):
@@ -14,8 +15,12 @@ class ArbitraryElement:
         return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
 
     def transmission(self, lam: float, n_elem: complex, n_gap: complex, params: SimParams):
-        n_eff = n_elem * self.x + n_gap * (1 - self.x)
-        k0 = 2*np.pi / lam
+        # Don't create a new tensor - use self.x directly to preserve gradients
+        x_tensor = self.x.to(params.device)
+        n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
+        # Use torch.pi with the correct device
+        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device)) / lam 
+        
         return torch.exp(1j * k0 * n_eff * self.thickness)
 
 

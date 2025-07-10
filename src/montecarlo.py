@@ -1,4 +1,4 @@
-from simparams import SimParams
+from src.simparams import SimParams
 import torch # type: ignore
 from typing import Callable
 

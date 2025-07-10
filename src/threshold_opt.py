@@ -1,7 +1,7 @@
 import numpy as np # type: ignore
 import nlopt # type: ignore
-from inversedesign_utils import create_objective_function # type: ignore
-from simparams import SimParams
+from src.inversedesign_utils import create_objective_function # type: ignore
+from src.simparams import SimParams
 from typing import Callable
 
 def threshold_opt(

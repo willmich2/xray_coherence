@@ -1,9 +1,9 @@
 import torch # type: ignore
-from propagation import propagate_z, apply_element
-from sources import plane_wave
-from elements import ArbitraryElement
-from simparams import SimParams
-from montecarlo import mc_propagate
+from src.propagation import propagate_z, apply_element
+from src.sources import plane_wave
+from src.elements import ArbitraryElement
+from src.simparams import SimParams
+from src.montecarlo import mc_propagate
 
 
 def propagate_z_arbg_z(
