@@ -100,3 +100,28 @@ def forward_model_focus_plane_wave_power(
     obj = P_out_center
 
     return obj
+
+def forward_model_focus_plane_wave_overlap(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    opt_params: dict,
+    elem_params: dict,
+    r_focus: float,
+    z: float, 
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the power within a center region of the output field.
+    """
+    n = opt_params["n"]
+    x_opt = torch.repeat_interleave(x, n)
+    U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
+
+    I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
+
+    R = torch.sqrt(sim_params.X**2 + sim_params.Y**2)
+    I_focus = torch.exp(-R**2 / (2 * r_focus**2))
+
+    obj = torch.sum(I_out * I_focus) / torch.sum(I_focus) / torch.sum(I_out)
+
+    return obj
