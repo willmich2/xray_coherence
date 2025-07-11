@@ -21,7 +21,7 @@ def propagate_z_arbg_z(
     return Uzgz
 
 def field_z_arbg_z(
-    x: np.ndarray,
+    x: torch.Tensor,
     sim_params: SimParams,
     elem_params: dict,
     z: float, 
@@ -50,7 +50,7 @@ def field_z_arbg_z(
     return U_out_mc
 
 def forward_model_focus_plane_wave(
-    x: np.ndarray, 
+    x: torch.Tensor, 
     sim_params: SimParams,
     opt_params: dict,
     elem_params: dict,
@@ -63,7 +63,7 @@ def forward_model_focus_plane_wave(
     Then, calculate the visibility of the output field.
     """
     n = opt_params["n"]
-    x_opt = np.repeat(x, n)
+    x_opt = torch.repeat_interleave(x, n)
     U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
     I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)

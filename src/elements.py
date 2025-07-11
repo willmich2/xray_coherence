@@ -10,14 +10,13 @@ class ArbitraryElement:
     thickness: float
     n_elem: complex
     n_gap: complex
-    x: np.ndarray
+    x: torch.Tensor
 
     def __str__(self):
         return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
 
     def transmission(self, lam: float, n_elem: complex, n_gap: complex, params: SimParams):
-        x_tensor = torch.tensor(self.x, dtype=torch.float32, device=params.device)
-        n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
+        n_eff = n_elem * self.x + n_gap * (1 - self.x)
         # Use torch.pi with the correct device
         k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device)) / lam 
         
