@@ -61,7 +61,7 @@ def forward_model_focus_plane_wave(
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
     Then, calculate the visibility of the output field.
     """
-    n = sim_params.Nx // opt_params["Nopt"]
+    n = opt_params["n"]
     x_opt = np.repeat(x, n)
     U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
