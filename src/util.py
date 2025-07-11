@@ -11,7 +11,7 @@ def kramers_law_weights(
     the output should be wavelengths and weights in inverse meters.
     """
     # convert to angular frequencies    
-    h = 6.62607015e-34 # J s
+    h = 4.135667696e-15 # eV s
     c = 299792458 # m/s
     lam_min = h * c / e_max
     lam_max = h * c / e_min
