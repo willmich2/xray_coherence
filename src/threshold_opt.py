@@ -1,4 +1,4 @@
-import torch
+import torch # type: ignore
 import numpy as np # type: ignore
 import nlopt # type: ignore
 from src.inversedesign_utils import create_objective_function # type: ignore
@@ -43,4 +43,4 @@ def threshold_opt(
             )(x_init, np.array([]))
         print(f"Stage {stage_idx} finished. obj = {(final_obj):.4f}")
     
-    return torch.tensor(x_init)
+    return x_init

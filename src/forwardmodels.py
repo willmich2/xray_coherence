@@ -1,4 +1,5 @@
 import torch # type: ignore
+import numpy as np # type: ignore
 from src.propagation import propagate_z, apply_element
 from src.sources import plane_wave
 from src.elements import ArbitraryElement
@@ -20,7 +21,7 @@ def propagate_z_arbg_z(
     return Uzgz
 
 def field_z_arbg_z(
-    x: torch.Tensor,
+    x: np.ndarray,
     sim_params: SimParams,
     elem_params: dict,
     z: float, 
@@ -49,7 +50,7 @@ def field_z_arbg_z(
     return U_out_mc
 
 def forward_model_focus_plane_wave(
-    x: torch.Tensor, 
+    x: np.ndarray, 
     sim_params: SimParams,
     elem_params: dict,
     forward_model_args: dict,
