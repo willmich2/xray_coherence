@@ -19,7 +19,8 @@ def threshold_opt(
         print(f"\n--- Stage {stage_idx} with beta = {beta_val} ---")
 
         # Create NLopt optimizer
-        opt = nlopt.opt(nlopt.LD_MMA, sim_params.Nx//opt_params["n"])
+        n = sim_params.Nx // opt_params["n"]
+        opt = nlopt.opt(nlopt.LD_MMA, n)
         
         # Set objective function for this stage, using the current beta
         opt.set_max_objective(create_objective_function(
@@ -31,8 +32,8 @@ def threshold_opt(
             ))
         
         # Optional bounds (could also be unbounded or partially bounded)
-        opt.set_lower_bounds([0.0] * sim_params.Nx)
-        opt.set_upper_bounds([1.0] * sim_params.Nx)
+        opt.set_lower_bounds([0.0] * n)
+        opt.set_upper_bounds([1.0] * n)
 
         opt.verbose = 1
         
