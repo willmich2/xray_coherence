@@ -54,7 +54,8 @@ def forward_model_focus_plane_wave(
     sim_params: SimParams,
     opt_params: dict,
     elem_params: dict,
-    forward_model_args: dict,
+    Ncenter: int,
+    Navg: int,
     z: float, 
     ) -> float:
     """
@@ -65,8 +66,6 @@ def forward_model_focus_plane_wave(
     x_opt = np.repeat(x, n)
     U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
-    Ncenter = forward_model_args["Ncenter"]
-    Navg = forward_model_args["Navg"]
     I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
     
     I_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].mean()

@@ -9,7 +9,7 @@ def threshold_opt(
     sim_params: SimParams, 
     opt_params: dict,
     forward_model: Callable,
-    forward_model_args: dict,
+    forward_model_args: tuple,
     beta_schedule: list[float], 
     max_eval_per_stage: int, 
     x_init: np.ndarray

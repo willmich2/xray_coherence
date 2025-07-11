@@ -8,7 +8,7 @@ def create_objective_function(
     forward_model: Callable, 
     sim_params: SimParams, 
     opt_params: dict, 
-    forward_model_args: dict
+    forward_model_args: tuple
     ) -> Callable:
     def objective_function(x, grad):
         """
@@ -22,7 +22,7 @@ def create_objective_function(
         g_thresholded = heaviside_projection(g, beta=beta)
 
         # Evaluate forward model
-        obj = forward_model(g_thresholded, sim_params, opt_params, forward_model_args)
+        obj = forward_model(g_thresholded, sim_params, opt_params, *forward_model_args)
 
         # If NLopt wants gradients:
         if grad.size > 0:
