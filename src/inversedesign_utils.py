@@ -35,7 +35,11 @@ def create_objective_function(
     return objective_function
 
 
-def heaviside_projection(x, beta=10.0, eta=0.5):
+def heaviside_projection(
+    x: torch.Tensor, 
+    beta: float = 10.0, 
+    eta: float = 0.5
+    ) -> torch.Tensor:
     """
     Projects continuous x in [0,1] (approximately) 
     into near-binary values using a smooth approximation of a step function.

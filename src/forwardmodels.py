@@ -81,7 +81,7 @@ def forward_model_focus_plane_wave_power(
     x: torch.Tensor, 
     sim_params: SimParams,
     elem_params: dict,
-    forward_model_args: dict,
+    Ncenter: int,
     z: float, 
     ) -> float:
     """
@@ -89,8 +89,6 @@ def forward_model_focus_plane_wave_power(
     Then, calculate the power within a center region of the output field.
     """
     U_out_mc = field_z_arbg_z(x, sim_params, elem_params, z)
-
-    Ncenter = forward_model_args["Ncenter"]
 
     I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
     
