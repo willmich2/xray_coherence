@@ -1,7 +1,15 @@
 import torch # type: ignore
 import numpy as np # type: ignore
+from typing import Callable
+from src.simparams import SimParams
 
-def create_objective_function(beta, forward_model, sim_params, forward_model_args):
+def create_objective_function(
+    beta: float, 
+    forward_model: Callable, 
+    sim_params: SimParams, 
+    opt_params: dict, 
+    forward_model_args: dict
+    ) -> Callable:
     def objective_function(x, grad):
         """
         x:    current guess (NumPy array)
@@ -14,7 +22,7 @@ def create_objective_function(beta, forward_model, sim_params, forward_model_arg
         g_thresholded = heaviside_projection(g, beta=beta)
 
         # Evaluate forward model
-        obj = forward_model(g_thresholded, sim_params, *forward_model_args)
+        obj = forward_model(g_thresholded, sim_params, opt_params, forward_model_args)
 
         # If NLopt wants gradients:
         if grad.size > 0:

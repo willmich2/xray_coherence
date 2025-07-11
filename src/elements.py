@@ -16,7 +16,6 @@ class ArbitraryElement:
         return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
 
     def transmission(self, lam: float, n_elem: complex, n_gap: complex, params: SimParams):
-        # Don't create a new tensor - use self.x directly to preserve gradients
         x_tensor = torch.tensor(self.x, dtype=torch.float32, device=params.device)
         n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
         # Use torch.pi with the correct device

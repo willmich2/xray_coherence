@@ -52,6 +52,7 @@ def field_z_arbg_z(
 def forward_model_focus_plane_wave(
     x: np.ndarray, 
     sim_params: SimParams,
+    opt_params: dict,
     elem_params: dict,
     forward_model_args: dict,
     z: float, 
@@ -60,7 +61,9 @@ def forward_model_focus_plane_wave(
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
     Then, calculate the visibility of the output field.
     """
-    U_out_mc = field_z_arbg_z(x, sim_params, elem_params, z)
+    n = sim_params.Nx // opt_params["Nopt"]
+    x_opt = np.repeat(x, n)
+    U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
     Ncenter = forward_model_args["Ncenter"]
     Navg = forward_model_args["Navg"]
