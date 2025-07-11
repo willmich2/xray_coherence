@@ -80,6 +80,7 @@ def forward_model_focus_plane_wave(
 def forward_model_focus_plane_wave_power(
     x: torch.Tensor, 
     sim_params: SimParams,
+    opt_params: dict,
     elem_params: dict,
     Ncenter: int,
     z: float, 
