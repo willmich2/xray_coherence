@@ -38,13 +38,13 @@ class ZonePlate:
         pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device))
         
         # Calculate radial distance from center
-        R = torch.sqrt(params.X**2 + params.Y**2)
+        R_squared = params.X**2 + params.Y**2
         
         # Fresnel zone plate pattern: alternating transparent and opaque zones
         # Zone boundaries occur at r_n = sqrt(n * lam * f + (n * lam * f)^2 / (4 * f^2))
         # For small angles, this simplifies to r_n ≈ sqrt(n * lam * f)
         
-        path_diff = torch.sqrt(R**2 + self.f**2) - self.f
+        path_diff = torch.sqrt(R_squared + self.f**2) - self.f
         # Calculate zone number for each point
         zone_number = torch.floor(path_diff / (lam / 2.0))
         

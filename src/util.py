@@ -14,9 +14,9 @@ def kramers_law_weights(
     h = 4.135667696e-15 # eV s
     c = 299792458 # m/s
     lam_min = h * c / e_max
-    lam_max = h * c / e_min
 
-    lams = np.linspace(lam_min, lam_max, N)
+    energies  = np.linspace(e_min, e_max, N)
+    lams = h * c / energies
     weights = (lams / lam_min - 1) / lams**2
     # ensure weights sum to 1
     weights /= np.sum(weights)
