@@ -56,3 +56,26 @@ class ZonePlate:
         
         return transmission
 
+@dataclass 
+class RectangularElement:
+    name: str
+    thickness: float
+    n_elem: complex
+    n_gap: complex
+    length: float # in x direction
+    width: float # in y direction
+
+    def __str__(self):
+        return f"RectangularElement(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
+
+    def transmission(self, lam: float, n_elem: complex, n_gap: complex, params: SimParams):
+        # create tensor of thicknsesses
+        thickness_tensor = torch.ones(params.Nx, params.Ny) * self.thickness
+        # make thickness tensor 0 for all points outside the element
+        thickness_tensor = torch.where(torch.abs(params.X) > self.length/2, 0, thickness_tensor)
+        thickness_tensor = torch.where(torch.abs(params.Y) > self.width/2, 0, thickness_tensor)
+        n_eff = n_elem * thickness_tensor
+        # Use torch.pi with the correct device
+        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device)) / lam 
+        
+        return torch.exp(1j * k0 * n_eff)
