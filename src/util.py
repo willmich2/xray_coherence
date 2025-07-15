@@ -16,7 +16,7 @@ def kramers_law_weights(
     c = 299792458 # m/s
     lam_min = h * c / e_max
     lam_max = h * c / e_min
-    
+
     # if uniform_energy is True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
     if uniform_energy:
         energies  = np.linspace(e_min, e_max, N)
@@ -25,7 +25,7 @@ def kramers_law_weights(
     else:
         lams = np.linspace(lam_min, lam_max, N)
         energies = h * c / lams
-        weights = (energies / e_min - 1) / energies**2
+        weights = e_max / energies - 1
     # ensure weights sum to 1
     weights /= np.sum(weights)
     return lams, weights
