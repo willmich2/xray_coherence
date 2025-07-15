@@ -93,6 +93,7 @@ def forward_model_focus_plane_wave_power(
     x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
+    
     U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
     I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
