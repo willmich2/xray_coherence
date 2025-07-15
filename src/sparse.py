@@ -2,7 +2,74 @@ import torch # type: ignore
 import cupy as cp # type: ignore
 import cupyx.scipy.sparse.linalg as linalg # type: ignore
 
-def matrix_free_eigsh(CSD_torch: torch.Tensor, k: int):
+def construct_CSD_diag_sparse(
+    x: torch.Tensor, 
+    bandwidth: int) -> torch.Tensor:
+    """
+    Ensemble-average outer product ⟨x xᵀ⟩, keeping only a ±bandwidth band.
+
+    This version is memory-efficient by pre-allocating tensors.
+
+    Parameters
+    ----------
+    x : (N, 1, Nx) or (N, Nx) tensor
+        The ensemble of 1-D column vectors.
+    bandwidth : int
+        Half-bandwidth k; only entries with |i - j| <= k are stored.
+
+    Returns
+    -------
+    torch.Tensor (sparse COO, shape (Nx, Nx))
+        Banded covariance matrix.
+    """
+    x = x.squeeze(1)  # (N, Nx)
+    N, Nx = x.shape
+    device = x.device
+    dtype = x.dtype
+
+    nnz = Nx + 2 * (bandwidth * Nx - bandwidth * (bandwidth + 1) // 2)
+
+    # 2. Pre-allocate tensors for indices and values
+    # Using torch.int64 for indices is standard
+    indices = torch.empty((2, nnz), dtype=torch.int64, device=device)
+    values = torch.empty(nnz, dtype=dtype, device=device)
+
+    # 3. Fill the pre-allocated tensors in a loop
+    current_pos = 0
+
+    for k in range(-bandwidth, bandwidth + 1):
+        k_abs = abs(k)
+        num_elems = Nx - k_abs
+
+        if num_elems <= 0:
+            continue
+
+        if k >= 0:
+            # v = ⟨x_i * x_{i+k}⟩
+            v = (x[:, :Nx - k] * x[:, k:].conj()).mean(dim=0)
+            r = torch.arange(Nx - k, device=device)
+            c = r + k
+        else:  # k < 0
+            # v = ⟨x_i * x_{i-|k|}⟩
+            v = (x[:, -k:] * x[:, :Nx + k].conj()).mean(dim=0)
+            c = torch.arange(Nx + k, device=device)
+            r = c - k  # r = c + abs(k)
+
+        # Write the calculated diagonal into the appropriate slice
+        indices[0, current_pos : current_pos + num_elems] = r
+        indices[1, current_pos : current_pos + num_elems] = c
+        values[current_pos : current_pos + num_elems] = v
+
+        # Update the position pointer
+        current_pos += num_elems
+
+    print('Loop and fill done')
+
+    return torch.sparse_coo_tensor(indices, values, (Nx, Nx))
+
+def matrix_free_eigsh(
+    CSD_torch: torch.Tensor, 
+    k: int):
     """
     Computes top k eigenvalues using a true matrix-free approach.
     It defines a LinearOperator for the mat-vec product without ever
