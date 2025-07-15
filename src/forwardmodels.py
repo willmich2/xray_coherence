@@ -89,8 +89,10 @@ def forward_model_focus_plane_wave_power(
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
     Then, calculate the power within a center region of the output field.
     """
+    # concatenate x and a backwards version of x
+    x_dbl = torch.cat((x, x[::-1]))
     n = opt_params["n"]
-    x_opt = torch.repeat_interleave(x, n)
+    x_opt = torch.repeat_interleave(x_dbl, n)
     U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
     I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
