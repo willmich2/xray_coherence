@@ -21,11 +21,10 @@ def kramers_law_weights(
     if uniform_energy:
         energies  = np.linspace(e_min, e_max, N)
         lams = h * c / energies
-        weights = (lams / lam_min - 1) / lams**2
+        weights = e_max / energies - 1
     else:
         lams = np.linspace(lam_min, lam_max, N)
-        energies = h * c / lams
-        weights = e_max / energies - 1
+        weights = (lams / lam_min - 1) / lams**2
     # ensure weights sum to 1
     weights /= np.sum(weights)
     return lams, weights
