@@ -174,15 +174,10 @@ def propagate_z_arbg_z_incoherent(
         n_gap=elem_params["n_gap"], 
         x=x
     )
-    # --- 1. Create an ideal point source to find the system's impulse response ---
-    # The field from a point source is represented as a delta function.
-    # We place it at the center of the grid for visualization, but its position
-    # doesn't matter for the OTF calculation due to shift-invariance.
+
     point_source_field = torch.zeros((Ny, Nx), dtype=torch.complex64, device=device)
     point_source_field[Ny // 2, Nx // 2] = 1.0
 
-    # --- 2. Calculate the system's coherent impulse response (h_sys) ---
-    # Propagate the point source field through the entire system.
     h_sys = propagate_z_arbg_z(
         U = point_source_field, 
         z = z, 
@@ -190,26 +185,14 @@ def propagate_z_arbg_z_incoherent(
         element = element
         )
 
-    # --- 3. Calculate the system's Optical Transfer Function (OTF_sys) ---
-    # The PSF is the squared magnitude of the coherent impulse response.
-    psf_sys = torch.abs(h_sys) ** 2
+    otf_sys = torch.fft.fft2(torch.fft.ifftshift(torch.abs(h_sys)** 2))
 
-    # The OTF is the Fourier transform of the PSF.
-    # We use ifftshift because the PSF is centered in space.
-    otf_sys = torch.fft.fft2(torch.fft.ifftshift(psf_sys))
-
-    # --- 4. Apply the OTF to the source intensity ---
-    # The convolution theorem states that convolution in the spatial domain
-    # is multiplication in the frequency domain.
-    source_intensity_ft = torch.fft.fft2(torch.fft.ifftshift(gaussian_source(sim_params, rsrc)))
+    source_intensity_ft = torch.fft.fft2(torch.fft.ifftshift(torch.abs(gaussian_source(sim_params, rsrc))**2))
     final_intensity_ft = source_intensity_ft * otf_sys
 
-    # --- 5. Retrieve the final intensity ---
-    # Inverse Fourier transform to get the result in the spatial domain.
-    # We use fftshift to re-center the final image.
     final_intensity = torch.fft.fftshift(torch.fft.ifft2(final_intensity_ft))
 
-    # Intensity must be real. Small imaginary parts may exist due to numerical error.
+    # intensity must be real. small imaginary parts may exist due to numerical error.
     return final_intensity.real
 
 
