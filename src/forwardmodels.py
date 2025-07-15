@@ -1,10 +1,15 @@
 import torch # type: ignore
 import numpy as np # type: ignore
 from src.propagation import propagate_z, apply_element
-from src.sources import plane_wave
+from src.sources import plane_wave, gaussian_source
 from src.elements import ArbitraryElement
 from src.simparams import SimParams
 from src.montecarlo import mc_propagate
+
+# TODO: 
+# - [] probably get rid of mc_propagate since we are modeling incoherence with the OTF
+# - [] add a function to calculate the OTF
+
 
 def propagate_z_arbg_z(
     U: torch.Tensor, 
@@ -93,7 +98,7 @@ def forward_model_focus_plane_wave_power(
     x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
-    
+
     U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
     I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
@@ -128,3 +133,109 @@ def forward_model_focus_plane_wave_overlap(
     obj = torch.sum(I_out * I_focus) / torch.sum(I_focus) / torch.sum(I_out)
 
     return obj
+
+def propagate_z_arbg_z_incoherent(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    elem_params: dict,
+    z: float, 
+    rsrc: float
+) -> torch.Tensor:
+    """
+    Calculates the final intensity of an incoherent source passing through a system.
+
+    This function computes the system's Optical Transfer Function (OTF) and applies
+    it to the source intensity distribution for a computationally efficient result.
+
+    Args:
+        source_intensity (torch.Tensor): A 2D tensor representing the intensity
+                                          distribution of the source.
+        element_transmittance (torch.Tensor): A 2D tensor for the complex
+                                              transmittance of the diffractive element.
+        z (float): The propagation distance before and after the element.
+        k (float): The wavenumber of the light (2 * pi / lambda).
+        dx (float): The pixel size (sampling interval) in the spatial domain.
+        propagate_field (callable): A function that propagates a complex field.
+                                    Signature: propagate_field(field, z, k, dx) -> propagated_field
+        apply_element (callable): A function that applies the diffractive element.
+                                  Signature: apply_element(field, element) -> resulting_field
+
+    Returns:
+        torch.Tensor: A 2D tensor representing the final intensity at the output plane.
+    """
+
+    device = sim_params.device
+    Ny, Nx = sim_params.Ny, sim_params.Nx
+
+    element = ArbitraryElement(
+        name="ArbitraryElement", 
+        thickness=elem_params["thickness"], 
+        n_elem=elem_params["n_elem"], 
+        n_gap=elem_params["n_gap"], 
+        x=x
+    )
+    # --- 1. Create an ideal point source to find the system's impulse response ---
+    # The field from a point source is represented as a delta function.
+    # We place it at the center of the grid for visualization, but its position
+    # doesn't matter for the OTF calculation due to shift-invariance.
+    point_source_field = torch.zeros((Ny, Nx), dtype=torch.complex64, device=device)
+    point_source_field[Ny // 2, Nx // 2] = 1.0
+
+    # --- 2. Calculate the system's coherent impulse response (h_sys) ---
+    # Propagate the point source field through the entire system.
+    h_sys = propagate_z_arbg_z(
+        U = point_source_field, 
+        z = z, 
+        sim_params = sim_params, 
+        element = element
+        )
+
+    # --- 3. Calculate the system's Optical Transfer Function (OTF_sys) ---
+    # The PSF is the squared magnitude of the coherent impulse response.
+    psf_sys = torch.abs(h_sys) ** 2
+
+    # The OTF is the Fourier transform of the PSF.
+    # We use ifftshift because the PSF is centered in space.
+    otf_sys = torch.fft.fft2(torch.fft.ifftshift(psf_sys))
+
+    # --- 4. Apply the OTF to the source intensity ---
+    # The convolution theorem states that convolution in the spatial domain
+    # is multiplication in the frequency domain.
+    source_intensity_ft = torch.fft.fft2(torch.fft.ifftshift(gaussian_source(sim_params, rsrc)))
+    final_intensity_ft = source_intensity_ft * otf_sys
+
+    # --- 5. Retrieve the final intensity ---
+    # Inverse Fourier transform to get the result in the spatial domain.
+    # We use fftshift to re-center the final image.
+    final_intensity = torch.fft.fftshift(torch.fft.ifft2(final_intensity_ft))
+
+    # Intensity must be real. Small imaginary parts may exist due to numerical error.
+    return final_intensity.real
+
+
+def focus_incoherent_power(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    opt_params: dict,
+    elem_params: dict,
+    Ncenter: int,
+    z: float, 
+    rsrc: float
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the power within a center region of the output field.
+    """
+    x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
+    n = opt_params["n"]
+    x_opt = torch.repeat_interleave(x_dbl, n)
+
+    I_out = propagate_z_arbg_z_incoherent(x_opt, sim_params, elem_params, z, rsrc)
+
+    P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
+
+    obj = P_out_center
+
+    return obj
+
+
