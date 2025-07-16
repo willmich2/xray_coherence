@@ -176,7 +176,7 @@ def propagate_z_arbg_z_incoherent(
         
         Uzg_lam = apply_element(Uz_lam, element, sim_params)
 
-        Uzgz_lam = angular_spectrum_propagation(
+        h_lam = angular_spectrum_propagation(
             U = Uzg_lam, 
             lam = lam, 
             z = z, 
@@ -184,9 +184,7 @@ def propagate_z_arbg_z_incoherent(
             device = device
             )
         
-        h_lam = Uzgz_lam
-
-        otf_lam = torch.fft.fft2(torch.fft.ifftshift(torch.abs(h_lam)** 2))
+        otf_lam = torch.fft.fft2(torch.fft.ifftshift(torch.abs(h_lam)**2))
 
         I_src_lam_ft = torch.fft.fft2(torch.fft.ifftshift(torch.abs(gaussian_source(sim_params, rsrc))**2))
         I_f_lam_ft = I_src_lam_ft * otf_lam
