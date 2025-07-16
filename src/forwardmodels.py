@@ -174,7 +174,8 @@ def propagate_z_arbg_z_incoherent(
             device = device
             )
         
-        Uzg_lam = apply_element(Uz_lam, element, sim_params)
+        t_lam = element.transmission(lam, element.n_elem, element.n_gap, sim_params)
+        Uzg_lam = Uz_lam * t_lam
 
         h_lam = angular_spectrum_propagation(
             U = Uzg_lam, 
