@@ -1,6 +1,6 @@
 import torch # type: ignore
 import numpy as np # type: ignore
-from src.propagation import propagate_z, apply_element
+from src.propagation import propagate_z, apply_element, angular_spectrum_propagation
 from src.sources import plane_wave, gaussian_source
 from src.elements import ArbitraryElement
 from src.simparams import SimParams
@@ -145,23 +145,7 @@ def propagate_z_arbg_z_incoherent(
     Calculates the final intensity of an incoherent source passing through a system.
 
     This function computes the system's Optical Transfer Function (OTF) and applies
-    it to the source intensity distribution for a computationally efficient result.
-
-    Args:
-        source_intensity (torch.Tensor): A 2D tensor representing the intensity
-                                          distribution of the source.
-        element_transmittance (torch.Tensor): A 2D tensor for the complex
-                                              transmittance of the diffractive element.
-        z (float): The propagation distance before and after the element.
-        k (float): The wavenumber of the light (2 * pi / lambda).
-        dx (float): The pixel size (sampling interval) in the spatial domain.
-        propagate_field (callable): A function that propagates a complex field.
-                                    Signature: propagate_field(field, z, k, dx) -> propagated_field
-        apply_element (callable): A function that applies the diffractive element.
-                                  Signature: apply_element(field, element) -> resulting_field
-
-    Returns:
-        torch.Tensor: A 2D tensor representing the final intensity at the output plane.
+    it to the source intensity distribution.
     """
 
     device = sim_params.device
@@ -175,25 +159,44 @@ def propagate_z_arbg_z_incoherent(
         x=x
     )
 
+    I_f = torch.zeros((Ny, Nx), dtype=torch.complex64, device=device)
+
     point_source_field = torch.zeros((Ny, Nx), dtype=torch.complex64, device=device)
     point_source_field[Ny // 2, Nx // 2] = 1.0
 
-    h_sys = propagate_z_arbg_z(
-        U = point_source_field, 
-        z = z, 
-        sim_params = sim_params, 
-        element = element
-        )
+    for weight, lam in zip(sim_params.weights, sim_params.lams):
 
-    otf_sys = torch.fft.fft2(torch.fft.ifftshift(torch.abs(h_sys)** 2))
+        Uz_lam = angular_spectrum_propagation(
+            U = point_source_field, 
+            lam = lam, 
+            z = z, 
+            dx = sim_params.dx, 
+            device = device
+            )
+        
+        Uzg_lam = apply_element(Uz_lam, element, sim_params)
 
-    source_intensity_ft = torch.fft.fft2(torch.fft.ifftshift(torch.abs(gaussian_source(sim_params, rsrc))**2))
-    final_intensity_ft = source_intensity_ft * otf_sys
+        Uzgz_lam = angular_spectrum_propagation(
+            U = Uzg_lam, 
+            lam = lam, 
+            z = z, 
+            dx = sim_params.dx, 
+            device = device
+            )
+        
+        h_lam = Uzgz_lam
 
-    final_intensity = torch.fft.fftshift(torch.fft.ifft2(final_intensity_ft))
+        otf_lam = torch.fft.fft2(torch.fft.ifftshift(torch.abs(h_lam)** 2))
+
+        I_src_lam_ft = torch.fft.fft2(torch.fft.ifftshift(torch.abs(gaussian_source(sim_params, rsrc))**2))
+        I_f_lam_ft = I_src_lam_ft * otf_lam
+
+        I_f_lam = torch.fft.fftshift(torch.fft.ifft2(I_f_lam_ft))
+
+        I_f += weight * I_f_lam
 
     # intensity must be real. small imaginary parts may exist due to numerical error.
-    return final_intensity.real
+    return I_f.real
 
 
 def focus_incoherent_power(
