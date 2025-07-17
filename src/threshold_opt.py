@@ -12,11 +12,13 @@ def threshold_opt(
     forward_model_args: tuple,
     beta_schedule: list[float], 
     max_eval_per_stage: int, 
-    x_init: np.ndarray
+    x_init: np.ndarray, 
+    print_results: bool = True
     ) -> np.ndarray:
     
     for stage_idx, beta_val in enumerate(beta_schedule, 1):
-        print(f"\n--- Stage {stage_idx} with beta = {beta_val} ---")
+        if print_results:
+            print(f"\n--- Stage {stage_idx} with beta = {beta_val} ---")
 
         # Create NLopt optimizer
         n = int(sim_params.Nx // opt_params["n"] // 2)
@@ -50,6 +52,17 @@ def threshold_opt(
             opt_params=opt_params, 
             forward_model_args=forward_model_args
             )(x_init, np.array([]))
-        print(f"Stage {stage_idx} finished. obj = {(final_obj):.4f}")
+        if print_results:
+            print(f"Stage {stage_idx} finished. obj = {(final_obj):.4f}")
     
-    return x_init
+    threshold_obj = create_objective_function(
+            beta=np.inf, 
+            forward_model=forward_model, 
+            sim_params=sim_params, 
+            opt_params=opt_params, 
+            forward_model_args=forward_model_args
+            )(x_init, np.array([]))
+    if print_results:
+        print(f"Threshold obj = {(threshold_obj):.4f}")
+
+    return x_init, threshold_obj
