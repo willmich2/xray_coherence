@@ -20,6 +20,7 @@ def threshold_opt(
 
         # Create NLopt optimizer
         n = sim_params.Nx // opt_params["n"] // 2
+        print(f"n = {n}")
         opt = nlopt.opt(nlopt.LD_MMA, n)
         
         # Set objective function for this stage, using the current beta
