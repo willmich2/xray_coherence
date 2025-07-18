@@ -51,8 +51,8 @@ class ZonePlate:
         # Create alternating pattern: even zones are transparent (1), odd zones are opaque (0)
         # For phase zone plate: even zones have phase 0, odd zones have phase pi
         transmission = torch.where(zone_number % 2 == 0, 
-                                  torch.exp(1j * 2*pi * n_elem * self.thickness / lam),
-                                  torch.exp(1j * 2*pi * n_gap * self.thickness / lam))
+                                  torch.exp(1j * 2*pi * n_gap * self.thickness / lam),
+                                  torch.exp(1j * 2*pi * n_elem * self.thickness / lam))
         
         return transmission
 
