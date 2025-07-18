@@ -99,7 +99,8 @@ def forward_model_focus_plane_wave_power(
     Uzgz = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
     # calculated intensity by summing over wavelengths, weighted by weights
-    I_out = torch.sum(Uzgz.abs().pow(2) * sim_params.weights, dim=0).reshape(sim_params.Nx)
+    weights_t = torch.tensor(sim_params.weights, dtype=Uzgz.real.dtype, device=Uzgz.device).view(-1, 1, 1)
+    I_out = torch.sum(Uzgz.abs().pow(2) * weights_t, dim=0).reshape(sim_params.Nx)
     
     P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
 
