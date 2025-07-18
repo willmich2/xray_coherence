@@ -38,11 +38,11 @@ def propagate_z(
     sim_params: SimParams
     ) -> torch.Tensor:
     
-    Uz = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
-    
-    for weight, lam in zip(sim_params.weights, sim_params.lams):
-        Uz_lam = angular_spectrum_propagation(U, lam, z, sim_params.dx, sim_params.device)
-        Uz += Uz_lam*weight
+    Uz = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+
+    for i, lam in enumerate(sim_params.lams):
+        Uz_lam = angular_spectrum_propagation(U[i, :, :], lam, z, sim_params.dx, sim_params.device)
+        Uz[i, :, :] = Uz_lam
     return Uz
 
 
@@ -102,12 +102,12 @@ def apply_element(
     element, 
     sim_params: SimParams
     ) -> torch.Tensor:
-    U_f = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+    U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
     
-    for weight, lam in zip(sim_params.weights, sim_params.lams):
+    for i, lam in enumerate(sim_params.lams):
         transmission = element.transmission(lam, element.n_elem, element.n_gap, sim_params)
-        U_lam = U * transmission
-        U_f += U_lam * weight
+        U_lam = U[i, :, :] * transmission
+        U_f[i, :, :] = U_lam
     return U_f
 
 

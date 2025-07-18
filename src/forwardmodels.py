@@ -42,17 +42,14 @@ def field_z_arbg_z(
         x=x
     )
 
-    U_out_mc = mc_propagate(
-        u_init_func=plane_wave, 
-        u_init_func_args=(), # no arguments for plane wave
-        prop_func=propagate_z_arbg_z,
-        prop_func_args=(element,),
-        n=1,
-        z=z, 
-        sim_params=sim_params
+    Uzgz = propagate_z_arbg_z(
+        U = plane_wave(sim_params), 
+        z = z, 
+        sim_params = sim_params, 
+        element = element
         )
 
-    return U_out_mc
+    return Uzgz
 
 def forward_model_focus_plane_wave(
     x: torch.Tensor, 
@@ -69,9 +66,9 @@ def forward_model_focus_plane_wave(
     """
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x, n)
-    U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
+    Uzgz = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
-    I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
+    I_out = torch.sum(Uzgz.abs().pow(2) * sim_params.weights, dim=0).reshape(sim_params.Nx)
     
     I_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].mean()
     I_out_edge = torch.cat((I_out[:Navg], I_out[-Navg:])).mean()
@@ -99,9 +96,10 @@ def forward_model_focus_plane_wave_power(
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
 
-    U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
+    Uzgz = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
-    I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
+    # calculated intensity by summing over wavelengths, weighted by weights
+    I_out = torch.sum(Uzgz.abs().pow(2) * sim_params.weights, dim=0).reshape(sim_params.Nx)
     
     P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
 
@@ -123,9 +121,9 @@ def forward_model_focus_plane_wave_overlap(
     """
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x, n)
-    U_out_mc = field_z_arbg_z(x_opt, sim_params, elem_params, z)
+    Uzgz = field_z_arbg_z(x_opt, sim_params, elem_params, z)
 
-    I_out = U_out_mc.abs().pow(2).reshape(sim_params.Nx)
+    I_out = torch.sum(Uzgz.abs().pow(2) * sim_params.weights, dim=0).reshape(sim_params.Nx)
 
     R = torch.sqrt(sim_params.X**2 + sim_params.Y**2)
     I_focus = torch.exp(-R**2 / (2 * r_focus**2))
