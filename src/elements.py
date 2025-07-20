@@ -8,14 +8,14 @@ torch.pi = torch.acos(torch.zeros(1)).item() * 2
 class ArbitraryElement:
     name: str
     thickness: float
-    n_elem: complex
-    n_gap: complex
+    elem_map: list[np.ndarray]
+    gap_map: list[np.ndarray]
     x: torch.Tensor
 
     def __str__(self):
-        return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
+        return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, elem_map={self.elem_map}, gap_map={self.gap_map})"
 
-    def transmission(self, lam: float, n_elem: complex, n_gap: complex, params: SimParams):
+    def transmission(self, lam: float, params: SimParams):
         x_tensor = self.x.to(params.device)
         n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
         # Use torch.pi with the correct device

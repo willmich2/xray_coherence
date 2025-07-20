@@ -1,4 +1,5 @@
 import numpy as np # type: ignore
+import pandas as pd # type: ignore
 from typing import Tuple
 
 def kramers_law_weights(
@@ -28,3 +29,22 @@ def kramers_law_weights(
     # ensure weights sum to 1
     weights /= np.sum(weights)
     return lams, weights
+
+def create_material_map(
+        material_name: str, 
+) -> list[np.ndarray]:
+   df_k = pd.read_csv(f"data/{material_name}_k.csv")
+   df_n = pd.read_csv(f"data/{material_name}_n.csv")
+   wavelengths = df_k["wl"].to_numpy()
+   k = df_k["k"].to_numpy()
+   n = df_n["n"].to_numpy()
+   return [wavelengths, n + 1j*k]
+
+def refractive_index_at_wvl(
+        wvl: float, 
+        material_map: list[np.ndarray], 
+) -> complex:
+        wavelengths = material_map[0]
+        refractive_indices = material_map[1]
+        return np.interp(wvl, wavelengths, refractive_indices)
+
