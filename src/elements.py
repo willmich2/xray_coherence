@@ -19,8 +19,8 @@ class ArbitraryElement:
     def transmission(self, lam: float, params: SimParams):
         x_tensor = self.x.to(params.device)
         # element and gap maps are in um, so convert lam to um
-        n_elem = refractive_index_at_wvl(lam*1e6, self.elem_map)
-        n_gap = refractive_index_at_wvl(lam*1e6, self.gap_map)
+        n_elem = refractive_index_at_wvl(lam, self.elem_map)
+        n_gap = refractive_index_at_wvl(lam, self.gap_map)
         n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
         # Use torch.pi with the correct device
         k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device)) / lam 
@@ -40,8 +40,8 @@ class ZonePlate:
     
     def transmission(self, lam: float, params: SimParams):
         pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device))
-        n_elem = refractive_index_at_wvl(lam*1e6, self.elem_map)
-        n_gap = refractive_index_at_wvl(lam*1e6, self.gap_map)
+        n_elem = refractive_index_at_wvl(lam, self.elem_map)
+        n_gap = refractive_index_at_wvl(lam, self.gap_map)
         # Calculate radial distance from center
         R_squared = params.X**2 + params.Y**2
         

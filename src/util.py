@@ -35,7 +35,7 @@ def create_material_map(
 ) -> list[np.ndarray]:
    df_k = pd.read_csv(f"/home/gridsan/wmichaels/xray_coherence/data/{material_name}_k.csv")
    df_n = pd.read_csv(f"/home/gridsan/wmichaels/xray_coherence/data/{material_name}_n.csv")
-   wavelengths = df_k["wl"].to_numpy()
+   wavelengths = df_k["wl"].to_numpy() / 1e6 # convert to m
    k = df_k["k"].to_numpy()
    n = df_n["n"].to_numpy()
    return [wavelengths, n + 1j*k]
