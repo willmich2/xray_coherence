@@ -31,16 +31,17 @@ class ArbitraryElement:
 class ZonePlate:
     name: str
     thickness: float
-    n_elem: complex
-    n_gap: complex
+    elem_map: list[np.ndarray]
+    gap_map: list[np.ndarray]
     f: float
 
     def __str__(self):
-        return f"ZonePlate(name={self.name}, thickness={self.thickness}, n_elem={self.n_elem}, n_gap={self.n_gap})"
+        return f"ZonePlate(name={self.name}, thickness={self.thickness}, elem_map={self.elem_map}, gap_map={self.gap_map})"
     
-    def transmission(self, lam: float, n_elem: complex, n_gap: complex, params: SimParams):
+    def transmission(self, lam: float, params: SimParams):
         pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device))
-        
+        n_elem = refractive_index_at_wvl(lam*1e6, self.elem_map)
+        n_gap = refractive_index_at_wvl(lam*1e6, self.gap_map)
         # Calculate radial distance from center
         R_squared = params.X**2 + params.Y**2
         
