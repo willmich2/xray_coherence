@@ -37,8 +37,8 @@ def field_z_arbg_z(
     element = ArbitraryElement(
         name="ArbitraryElement", 
         thickness=elem_params["thickness"], 
-        n_elem=elem_params["n_elem"], 
-        n_gap=elem_params["n_gap"], 
+        elem_map=elem_params["elem_map"], 
+        gap_map=elem_params["gap_map"], 
         x=x
     )
 
@@ -153,8 +153,8 @@ def propagate_z_arbg_z_incoherent(
     element = ArbitraryElement(
         name="ArbitraryElement", 
         thickness=elem_params["thickness"], 
-        n_elem=elem_params["n_elem"], 
-        n_gap=elem_params["n_gap"], 
+        elem_map=elem_params["elem_map"], 
+        gap_map=elem_params["gap_map"], 
         x=x
     )
 
@@ -173,7 +173,7 @@ def propagate_z_arbg_z_incoherent(
             device = device
             )
         
-        t_lam = element.transmission(lam, element.n_elem, element.n_gap, sim_params)
+        t_lam = element.transmission(lam, sim_params)
         Uzg_lam = Uz_lam * t_lam
 
         h_lam = angular_spectrum_propagation(
