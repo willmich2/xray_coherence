@@ -71,9 +71,6 @@ venv.bak/
 *.hdf5
 
 # Data files
-*.csv
-*.dat
-*.txt
 !requirements.txt
 !README.txt
 
