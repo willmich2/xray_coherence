@@ -105,7 +105,7 @@ def apply_element(
     U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
     
     for i, lam in enumerate(sim_params.lams):
-        transmission = element.transmission(lam, element.n_elem, element.n_gap, sim_params)
+        transmission = element.transmission(lam, sim_params)
         U_lam = U[i, :, :] * transmission
         U_f[i, :, :] = U_lam
     return U_f
