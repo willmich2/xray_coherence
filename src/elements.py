@@ -18,14 +18,13 @@ class ArbitraryElement:
 
     def transmission(self, lam: float, params: SimParams):
         x_tensor = self.x.to(params.device)
-        # element and gap maps are in um, so convert lam to um
         n_elem = refractive_index_at_wvl(lam, self.elem_map)
         n_gap = refractive_index_at_wvl(lam, self.gap_map)
         n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
         # Use torch.pi with the correct device
         k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device)) / lam 
         
-        return torch.exp(1j * k0 * n_eff * self.thickness)
+        return torch.exp(1j * k0 * (n_eff - 1) * self.thickness)
 
 @dataclass
 class ZonePlate:
