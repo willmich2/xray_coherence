@@ -76,8 +76,10 @@ class ZonePlate:
         R_cutoff = (lam * self.f) / (2 * self.min_feature_size)
         
         # Calculate the path difference to determine the zone number for each point
-        path_diff = torch.sqrt(R_squared + self.f**2) - self.f
-        zone_number = torch.floor(path_diff / (lam / 2.0))
+        # path_diff = torch.sqrt(R_squared + self.f**2) - self.f
+        # zone_number = torch.floor(path_diff / (lam / 2.0))
+
+        zone_number = torch.floor(R_squared / (lam * self.f))
 
         # Define the complex transmission for the element and gap materials
         trans_elem = torch.exp(1j * 2 * pi * (n_elem - 1) * self.thickness / lam)
