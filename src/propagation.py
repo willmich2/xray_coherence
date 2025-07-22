@@ -134,7 +134,7 @@ def apply_element_sliced(
 
             transmission = slice_element.transmission(lam, sim_params)
             U_lam = U[i, :, :] * transmission
-            U_lam = propagate_z(U_lam, t_slice, sim_params)
+            U_lam = angular_spectrum_propagation(U_lam, lam, t_slice, sim_params.dx, sim_params.device)
             U_f[i, :, :] = U_lam
     
     return U_f
