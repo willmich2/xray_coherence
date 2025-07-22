@@ -1,5 +1,6 @@
 import torch # type: ignore
 import torch.nn.functional as F # type: ignore
+import numpy as np # type: ignore
 from src.simparams import SimParams
 from src.util import refractive_index_at_wvl
 
@@ -104,9 +105,10 @@ def apply_element(
     sim_params: SimParams
     ) -> torch.Tensor:
     U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
-    
+    max_lam = sim_params.lams[np.argmax(sim_params.weights)]
+    transmission = element.transmission(max_lam, sim_params)
+
     for i, lam in enumerate(sim_params.lams):
-        transmission = element.transmission(lam, sim_params)
         U_lam = U[i, :, :] * transmission
         U_f[i, :, :] = U_lam
     return U_f
@@ -120,6 +122,8 @@ def apply_element_sliced(
     ) -> torch.Tensor:
     
     U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+
+    max_lam = sim_params.lams[np.argmax(sim_params.weights)]
     
     for i, lam in enumerate(sim_params.lams):
         t = element.thickness
@@ -131,7 +135,7 @@ def apply_element_sliced(
             slice_element = element.__copy__()
             slice_element.thickness = t_slice
 
-            transmission = slice_element.transmission(lam, sim_params)
+            transmission = slice_element.transmission(max_lam, sim_params)
             U_lam = U[i, :, :] * transmission
             U_lam = angular_spectrum_propagation(U_lam, lam, t_slice, sim_params.dx, sim_params.device)
             U_f[i, :, :] = U_lam

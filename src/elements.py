@@ -25,13 +25,13 @@ class ArbitraryElement:
             x=self.x
             )
 
-    def transmission(self, lam: float, params: SimParams):
-        x_tensor = self.x.to(params.device)
+    def transmission(self, lam: float, sim_params: SimParams):
+        x_tensor = self.x.to(sim_params.device)
         n_elem = refractive_index_at_wvl(lam, self.elem_map)
         n_gap = refractive_index_at_wvl(lam, self.gap_map)
         n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
         # Use torch.pi with the correct device
-        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device)) / lam 
+        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=sim_params.device)) / lam 
         
         return torch.exp(1j * k0 * (n_eff - 1) * self.thickness)
 
@@ -57,7 +57,7 @@ class ZonePlate:
             f=self.f
             )
     
-    def transmission(self, lam: float, params: SimParams):
+    def transmission(self, lam: float, sim_params: SimParams):
         """
         Calculates the transmission function of the zone plate.
         
@@ -65,12 +65,12 @@ class ZonePlate:
         the minimum feature size. Beyond this radius, the transmission is
         that of the gap material.
         """
-        pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device))
+        pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=sim_params.device))
         n_elem = refractive_index_at_wvl(lam, self.elem_map)
         n_gap = refractive_index_at_wvl(lam, self.gap_map)
         
         # Calculate radial distance from center for all points in the grid
-        R_squared = params.X**2 + params.Y**2
+        R_squared = sim_params.X**2 + sim_params.Y**2
         R = torch.sqrt(R_squared)
 
         R_cutoff = (lam * self.f) / (2 * self.min_feature_size)
