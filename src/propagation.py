@@ -122,19 +122,18 @@ def apply_element_sliced(
     U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
     
     for i, lam in enumerate(sim_params.lams):
-        n = refractive_index_at_wvl(lam, element.elem_map)
         t = element.thickness
         n_slices = int(t // slice_thickness)
         for j in range(n_slices):
             t_slice = slice_thickness
             if j == n_slices - 1:
                 t_slice = t - j * slice_thickness
-            slice_element = element
+            slice_element = element.__copy__()
             slice_element.thickness = t_slice
 
             transmission = slice_element.transmission(lam, sim_params)
             U_lam = U[i, :, :] * transmission
             U_lam = angular_spectrum_propagation(U_lam, lam, t_slice, sim_params.dx, sim_params.device)
             U_f[i, :, :] = U_lam
-    
+        
     return U_f

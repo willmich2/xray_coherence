@@ -16,6 +16,15 @@ class ArbitraryElement:
     def __str__(self):
         return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, elem_map={self.elem_map}, gap_map={self.gap_map})"
 
+    def __copy__(self):
+        return ArbitraryElement(
+            name=self.name, 
+            thickness=self.thickness, 
+            elem_map=self.elem_map, 
+            gap_map=self.gap_map, 
+            x=self.x
+            )
+
     def transmission(self, lam: float, params: SimParams):
         x_tensor = self.x.to(params.device)
         n_elem = refractive_index_at_wvl(lam, self.elem_map)
@@ -36,6 +45,15 @@ class ZonePlate:
 
     def __str__(self):
         return f"ZonePlate(name={self.name}, thickness={self.thickness}, elem_map={self.elem_map}, gap_map={self.gap_map})"
+
+    def __copy__(self):
+        return ZonePlate(
+            name=self.name, 
+            thickness=self.thickness, 
+            elem_map=self.elem_map, 
+            gap_map=self.gap_map, 
+            f=self.f
+            )
     
     def transmission(self, lam: float, params: SimParams):
         pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device))
