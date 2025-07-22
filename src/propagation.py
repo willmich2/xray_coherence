@@ -124,7 +124,7 @@ def apply_element_sliced(
     for i, lam in enumerate(sim_params.lams):
         n = refractive_index_at_wvl(lam, element.elem_map)
         t = element.thickness
-        n_slices = t // slice_thickness
+        n_slices = int(t // slice_thickness)
         for j in range(n_slices):
             t_slice = slice_thickness
             if j == n_slices - 1:
