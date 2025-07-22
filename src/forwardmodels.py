@@ -21,7 +21,7 @@ def propagate_z_arbg_z(
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
     """
     Uz = propagate_z(U, z, sim_params)
-    Uzg = apply_element(Uz, element, sim_params)
+    Uzg = element.apply_element(Uz, sim_params)
     Uzgz = propagate_z(Uzg, z, sim_params)
     return Uzgz
 
