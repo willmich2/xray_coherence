@@ -39,42 +39,60 @@ class ArbitraryElement:
 class ZonePlate:
     name: str
     thickness: float
+    min_feature_size: float
     elem_map: list[np.ndarray]
     gap_map: list[np.ndarray]
     f: float
 
     def __str__(self):
-        return f"ZonePlate(name={self.name}, thickness={self.thickness}, elem_map={self.elem_map}, gap_map={self.gap_map})"
+        return f"ZonePlate(name={self.name}, thickness={self.thickness}, min_feature_size={self.min_feature_size}, elem_map={self.elem_map}, gap_map={self.gap_map})"
 
     def __copy__(self):
         return ZonePlate(
             name=self.name, 
             thickness=self.thickness, 
-            elem_map=self.elem_map, 
-            gap_map=self.gap_map, 
+            min_feature_size=self.min_feature_size,
+            elem_map=self.elem_map,
+            gap_map=self.gap_map,
             f=self.f
             )
     
     def transmission(self, lam: float, params: SimParams):
+        """
+        Calculates the transmission function of the zone plate.
+        
+        The zone plate pattern is generated up to a maximum radius determined by
+        the minimum feature size. Beyond this radius, the transmission is
+        that of the gap material.
+        """
         pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device))
         n_elem = refractive_index_at_wvl(lam, self.elem_map)
         n_gap = refractive_index_at_wvl(lam, self.gap_map)
-        # Calculate radial distance from center
+        
+        # Calculate radial distance from center for all points in the grid
         R_squared = params.X**2 + params.Y**2
+        R = torch.sqrt(R_squared)
+
+        R_cutoff = (lam * self.f) / (2 * self.min_feature_size)
         
-        # Fresnel zone plate pattern: alternating transparent and opaque zones
-        # Zone boundaries occur at r_n = sqrt(n * lam * f + (n * lam * f)^2 / (4 * f^2))
-        # For small angles, this simplifies to r_n ≈ sqrt(n * lam * f)
-        
+        # Calculate the path difference to determine the zone number for each point
         path_diff = torch.sqrt(R_squared + self.f**2) - self.f
-        # Calculate zone number for each point
         zone_number = torch.floor(path_diff / (lam / 2.0))
+
+        # Define the complex transmission for the element and gap materials
+        trans_elem = torch.exp(1j * 2 * pi * (n_elem - 1) * self.thickness / lam)
+        trans_gap = torch.exp(1j * 2 * pi * (n_gap - 1) * self.thickness / lam)
+
+        # Create the ideal, infinite zone plate pattern based on the zone number
+        # Even zones get the gap transmission, odd zones get the element transmission.
+        zp_pattern = torch.where(zone_number % 2 == 0, 
+                                  trans_gap,
+                                  trans_elem)
         
-        # Create alternating pattern: even zones are transparent (1), odd zones are opaque (0)
-        # For phase zone plate: even zones have phase 0, odd zones have phase pi
-        transmission = torch.where(zone_number % 2 == 0, 
-                                  torch.exp(1j * 2*pi * (n_gap - 1) * self.thickness / lam),
-                                  torch.exp(1j * 2*pi * (n_elem - 1) * self.thickness / lam))
+        transmission = torch.where(R <= R_cutoff,
+                                   zp_pattern,
+                                   trans_gap)
+        # --- MODIFICATION END ---
         
         return transmission
 
