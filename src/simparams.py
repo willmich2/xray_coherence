@@ -17,3 +17,13 @@ class SimParams:
 
     def __str__(self):
         return f"SimParams(Ny={self.Ny}, Nx={self.Nx}, dx={self.dx}, device={self.device}, lams={self.lams}, weights={self.weights}"
+
+    def copy(self):
+        return SimParams(
+            Ny = self.Ny, 
+            Nx = self.Nx, 
+            dx = self.dx, 
+            device = self.device, 
+            lams = self.lams, 
+            weights = self.weights
+            )

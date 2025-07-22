@@ -1,6 +1,7 @@
 import torch # type: ignore
 import torch.nn.functional as F # type: ignore
 from src.simparams import SimParams
+from src.util import refractive_index_at_wvl
 
 def angular_spectrum_propagation(
     U: torch.Tensor, 
@@ -111,4 +112,29 @@ def apply_element(
     return U_f
 
 
+def apply_element_sliced(
+    U: torch.Tensor, 
+    element, 
+    slice_thickness: float,
+    sim_params: SimParams
+    ) -> torch.Tensor:
     
+    U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+    
+    for i, lam in enumerate(sim_params.lams):
+        n = refractive_index_at_wvl(lam, element.elem_map)
+        t = element.thickness
+        n_slices = t // slice_thickness
+        for j in range(n_slices):
+            t_slice = slice_thickness
+            if j == n_slices - 1:
+                t_slice = t - j * slice_thickness
+            slice_element = element
+            slice_element.thickness = t_slice
+
+            transmission = slice_element.transmission(lam, sim_params)
+            U_lam = U[i, :, :] * transmission
+            U_lam = propagate_z(U_lam, t_slice, sim_params)
+            U_f[i, :, :] = U_lam
+    
+    return U_f
