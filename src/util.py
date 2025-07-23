@@ -48,7 +48,7 @@ def kramers_law_weights(
         lams = np.linspace(lam_min, lam_max, N)
         weights = (lams / lam_min - 1) / lams**2
         if filter_al:
-                al_data_lams = h * c / al_data_energies
+                al_data_lams = np.flip(h * c / al_data_energies)
                 interp_coeffs = np.interp(lams, al_data_lams, al_mass_att_coeffs)
                 weights = np.exp(-filter_thickness*interp_coeffs) * weights
     # ensure weights sum to 1
