@@ -12,6 +12,7 @@ def threshold_opt(
     forward_model_args: tuple,
     beta_schedule: list[float], 
     max_eval_per_stage: int, 
+    method,
     x_init: np.ndarray, 
     print_results: bool = True
     ) -> np.ndarray:
@@ -22,7 +23,7 @@ def threshold_opt(
 
         # Create NLopt optimizer
         n = int(sim_params.Nx // opt_params["n"] // 2)
-        opt = nlopt.opt(nlopt.LD_MMA, n)
+        opt = nlopt.opt(method, n)
         
         # Set objective function for this stage, using the current beta
         opt.set_max_objective(create_objective_function(
