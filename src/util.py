@@ -24,7 +24,8 @@ def kramers_law_weights(
         N: int,
         filter_al: bool = True,
         filter_thickness: float = 1e-3,
-        uniform_energy: bool = True # if True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
+        uniform_energy: bool = True, # if True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
+        weight_cutoff: float = 1e-2,
 ) -> Tuple[np.ndarray, np.ndarray]: 
     """
     Calculate the spectral weights according to Kramer's law. The input energies are in eV and 
@@ -53,6 +54,10 @@ def kramers_law_weights(
                 weights = np.exp(-filter_thickness*interp_coeffs) * weights
     # ensure weights sum to 1
     weights /= np.sum(weights)
+    # if a weight is less than weight_cutoff, remove it from the list
+    lams = lams[weights > weight_cutoff]
+    weights = weights[weights > weight_cutoff]
+
     return lams, weights
 
 def create_material_map(
