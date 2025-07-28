@@ -178,7 +178,7 @@ class ZonePlate:
     def apply_element(self, U: torch.Tensor, sim_params: SimParams):
         U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
         # zone plate profile changes with wavelength, so we need to use the maximum wavelength to maintain a constant profile
-        max_lam = sim_params.lams[np.argmax(sim_params.weights)]
+        max_lam = sim_params.lams[torch.argmax(sim_params.weights)]
         for i, lam in enumerate(sim_params.lams):
             transmission = self.transmission(lam, max_lam, sim_params)
             U_lam = U[i, :, :] * transmission
