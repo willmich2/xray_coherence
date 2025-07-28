@@ -82,7 +82,7 @@ class ArbitraryElement:
 
         # Get the transmission for all wavelengths at once.
         # The result `transmission` will have shape (C, Ny, Nx).
-        transmission = self.transmission_batched(lams_tensor, sim_params)
+        transmission = self.transmission(lams_tensor, sim_params)
 
         # Apply the transmission to the input tensor U. This is an element-wise
         # multiplication of two (C, Ny, Nx) tensors.
