@@ -8,8 +8,8 @@ class SimParams:
     dx: float
     device: torch.device
     dtype: torch.dtype
-    lams: list[float]
-    weights: list[float]
+    lams: torch.Tensor
+    weights: torch.Tensor
 
     def __post_init__(self):
         zero = torch.zeros(0, dtype=self.dtype, device=self.device)
