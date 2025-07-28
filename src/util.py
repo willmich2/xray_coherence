@@ -1,6 +1,7 @@
 import numpy as np # type: ignore
 import pandas as pd # type: ignore
 import torch # type: ignore
+import torch.nn.functional as F # type: ignore
 from typing import Tuple
 
 
@@ -77,5 +78,5 @@ def refractive_index_at_wvl(
 ) -> torch.Tensor:
         wavelengths = torch.tensor(material_map[0])
         refractive_indices = torch.tensor(material_map[1])
-        return torch.interp(wvl, wavelengths, refractive_indices)
+        return F.interpolate(wvl, wavelengths, refractive_indices)
 
