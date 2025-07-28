@@ -19,8 +19,8 @@ def angular_spectrum_propagation(
     pi = torch.acos(torch.tensor(-1.0, dtype=U_padded.real.dtype, device=device))
     k0 = 2*pi/lam
 
-    kx = torch.fft.fftfreq(Nx_padded, dx, dtype=U_padded.real.dtype, device=device) * 2*pi
-    ky = torch.fft.fftfreq(Ny_padded, dx, dtype=U_padded.real.dtype, device=device) * 2*pi
+    kx = torch.fft.fftfreq(Nx_padded, dx, dtype=torch.float32, device=device) * 2*pi
+    ky = torch.fft.fftfreq(Ny_padded, dx, dtype=torch.float32, device=device) * 2*pi
     KY, KX = torch.meshgrid(ky, kx, indexing='ij')
 
     sqrt_arg = k0**2 - KX**2 - KY**2
