@@ -5,46 +5,97 @@ from src.simparams import SimParams
 from src.util import refractive_index_at_wvl
 
 def angular_spectrum_propagation(
-    U: torch.Tensor, 
-    lam: float, 
-    z: float, 
-    dx: float, 
+    U: torch.Tensor,
+    lam: torch.Tensor,
+    z: float,
+    dx: float,
     device: torch.device
-    ) -> torch.Tensor:
-    
+) -> torch.Tensor:
+    """
+    Performs angular spectrum propagation for a batch of fields.
+
+    Args:
+        U (torch.Tensor): Input field, shape (batch, Ny, Nx).
+        lam (torch.Tensor): Wavelength for each field in the batch, shape (batch,).
+        z (float): Propagation distance.
+        dx (float): Pixel size.
+        device (torch.device): The torch device to use for calculations.
+
+    Returns:
+        torch.Tensor: The propagated field, shape (batch, Ny, Nx).
+    """
+    # Pad the input field to avoid aliasing from circular convolution.
+    # Assumes pad_double_width correctly pads the last two (spatial) dimensions.
     U_padded = pad_double_width(U)
+    batch_size, Ny_padded, Nx_padded = U_padded.shape
 
-    Ny_padded, Nx_padded = U_padded.shape
+    # --- Setup constants and coordinates ---
+    pi = torch.acos(torch.tensor(-1.0, dtype=torch.cfloat, device=device))
 
-    pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=device))
-    k0 = 2*pi/lam
+    # Reshape wavelengths to (batch, 1, 1) for broadcasting.
+    lam_reshaped = lam.view(batch_size, 1, 1).to(torch.cfloat)
+    
+    # Calculate wave number k0 for each wavelength in the batch.
+    # Shape: (batch, 1, 1)
+    k0 = 2 * pi / lam_reshaped
 
-    kx = torch.fft.fftfreq(Nx_padded, dx, dtype=torch.float32, device=device) * 2*pi
-    ky = torch.fft.fftfreq(Ny_padded, dx, dtype=torch.float32, device=device) * 2*pi
+    # Create spatial frequency coordinates (these are the same for all items in batch).
+    kx = torch.fft.fftfreq(Nx_padded, dx, dtype=torch.cfloat, device=device) * 2 * pi
+    ky = torch.fft.fftfreq(Ny_padded, dx, dtype=torch.cfloat, device=device) * 2 * pi
     KY, KX = torch.meshgrid(ky, kx, indexing='ij')
 
+    # --- Construct the Transfer Function ---
+    # The core calculation is now batched.
+    # Broadcasting (batch, 1, 1) with (Ny_padded, Nx_padded) results in (batch, Ny_padded, Nx_padded).
     sqrt_arg = k0**2 - KX**2 - KY**2
-    sqrt_arg[sqrt_arg < 0] = 0.0
+    
+    # Ensure the argument for the square root is real and non-negative for propagating waves.
+    # Evanescent waves (where the argument is negative) will have their magnitude decay to zero.
+    sqrt_arg_real = sqrt_arg.real
+    sqrt_arg_real[sqrt_arg_real < 0] = 0.0
+    
+    # The transfer function is now a batch of functions, one for each wavelength.
+    # Shape: (batch, Ny_padded, Nx_padded)
+    transfer_function = torch.exp(1j * z * torch.sqrt(sqrt_arg_real))
 
-    transfer_function = torch.exp(1j * z * torch.sqrt(sqrt_arg))
-
-
+    # --- Apply Propagation in Fourier Domain ---
+    # torch.fft.fft2 and ifft2 operate on the last two dimensions by default,
+    # correctly handling the batch dimension.
     U_fourier = torch.fft.fft2(U_padded)
     U_z_padded = torch.fft.ifft2(U_fourier * transfer_function)
+
+    # Unpad the result to the original spatial dimensions.
     U_z = unpad_half_width(U_z_padded)
-    return U_z
+    
+    return U_z.real
 
 def propagate_z(
-    U: torch.Tensor, 
-    z: float, 
-    sim_params: SimParams
-    ) -> torch.Tensor:
-    
-    Uz = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
+    U: torch.Tensor,
+    z: float,
+    sim_params: "SimParams"
+) -> torch.Tensor:
+    """
+    Propagates a multi-wavelength field U over a distance z.
 
-    for i, lam in enumerate(sim_params.lams):
-        Uz_lam = angular_spectrum_propagation(U[i, :, :], lam, z, sim_params.dx, sim_params.device)
-        Uz[i, :, :] = Uz_lam
+    Args:
+        U (torch.Tensor): Input field, shape (num_wavelengths, Ny, Nx).
+        z (float): Propagation distance.
+        sim_params (SimParams): Object containing simulation parameters like
+                                wavelengths, pixel size, and device.
+
+    Returns:
+        torch.Tensor: The propagated field, shape (num_wavelengths, Ny, Nx).
+    """
+    # The for-loop is replaced with a single, batched call to the
+    # modified angular_spectrum_propagation function. The first dimension of U
+    # (num_wavelengths) is treated as the batch dimension.
+    Uz = angular_spectrum_propagation(
+        U,
+        sim_params.lams,
+        z,
+        sim_params.dx,
+        sim_params.device
+    )
     return Uz
 
 

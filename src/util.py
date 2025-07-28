@@ -78,5 +78,5 @@ def refractive_index_at_wvl(
         wavelengths = material_map[0]
         refractive_indices = material_map[1]
         wvl_np = wvl.cpu().numpy()
-        return torch.tensor(np.interp(wvl_np, wavelengths, refractive_indices), dtype=wvl.dtype, device=wvl.device)
+        return torch.tensor(np.interp(wvl_np, wavelengths, refractive_indices), dtype=torch.complex64, device=wvl.device)
 
