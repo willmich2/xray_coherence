@@ -92,7 +92,7 @@ def forward_model_focus_plane_wave_power(
     Then, calculate the power within a center region of the output field.
     """
     # concatenate x and a backwards version of x
-    x_dbl = torch.cat((x, x[::-1]))
+    x_dbl = torch.cat((x, x[::-1])).contiguous()
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
 
