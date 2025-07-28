@@ -15,14 +15,14 @@ def angular_spectrum_propagation(
     Performs angular spectrum propagation for a batch of fields.
 
     Args:
-        U (torch.Tensor): Input field, shape (batch, Ny, Nx).
+        U (torch.Tensor): Input field, shape (batch, Ny, Nx). Can be real or complex.
         lam (torch.Tensor): Wavelength for each field in the batch, shape (batch,).
         z (float): Propagation distance.
         dx (float): Pixel size.
         device (torch.device): The torch device to use for calculations.
 
     Returns:
-        torch.Tensor: The propagated field, shape (batch, Ny, Nx).
+        torch.Tensor: The propagated complex field, shape (batch, Ny, Nx).
     """
     # Pad the input field to avoid aliasing from circular convolution.
     # Assumes pad_double_width correctly pads the last two (spatial) dimensions.
@@ -33,7 +33,8 @@ def angular_spectrum_propagation(
     pi = torch.acos(torch.tensor(-1.0, dtype=torch.cfloat, device=device))
 
     # Reshape wavelengths to (batch, 1, 1) for broadcasting.
-    lam_reshaped = lam.view(batch_size, 1, 1).to(torch.cfloat)
+    # Using reshape() is more robust and avoids the TypeError.
+    lam_reshaped = lam.reshape(batch_size, 1, 1).to(torch.cfloat)
     
     # Calculate wave number k0 for each wavelength in the batch.
     # Shape: (batch, 1, 1)
@@ -49,14 +50,13 @@ def angular_spectrum_propagation(
     # Broadcasting (batch, 1, 1) with (Ny_padded, Nx_padded) results in (batch, Ny_padded, Nx_padded).
     sqrt_arg = k0**2 - KX**2 - KY**2
     
-    # Ensure the argument for the square root is real and non-negative for propagating waves.
-    # Evanescent waves (where the argument is negative) will have their magnitude decay to zero.
-    sqrt_arg_real = sqrt_arg.real
-    sqrt_arg_real[sqrt_arg_real < 0] = 0.0
+    # Let torch.sqrt handle the complex argument. This correctly models both
+    # propagating waves (real sqrt) and evanescent waves (imaginary sqrt).
+    kz = torch.sqrt(sqrt_arg)
     
     # The transfer function is now a batch of functions, one for each wavelength.
     # Shape: (batch, Ny_padded, Nx_padded)
-    transfer_function = torch.exp(1j * z * torch.sqrt(sqrt_arg_real))
+    transfer_function = torch.exp(1j * z * kz)
 
     # --- Apply Propagation in Fourier Domain ---
     # torch.fft.fft2 and ifft2 operate on the last two dimensions by default,
@@ -67,7 +67,8 @@ def angular_spectrum_propagation(
     # Unpad the result to the original spatial dimensions.
     U_z = unpad_half_width(U_z_padded)
     
-    return U_z.real
+    # Return the full complex field to preserve phase information.
+    return U_z
 
 def propagate_z(
     U: torch.Tensor,
@@ -84,7 +85,7 @@ def propagate_z(
                                 wavelengths, pixel size, and device.
 
     Returns:
-        torch.Tensor: The propagated field, shape (num_wavelengths, Ny, Nx).
+        torch.Tensor: The propagated complex field, shape (num_wavelengths, Ny, Nx).
     """
     # The for-loop is replaced with a single, batched call to the
     # modified angular_spectrum_propagation function. The first dimension of U
