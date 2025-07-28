@@ -17,7 +17,7 @@ def threshold_opt(
     print_results: bool = True
     ) -> np.ndarray:
 
-    compiled_model = torch.compile(forward_model, mode="default")
+    # compiled_model = torch.compile(forward_model, mode="default")
 
     for stage_idx, beta_val in enumerate(beta_schedule, 1):
         if print_results:
@@ -30,7 +30,7 @@ def threshold_opt(
         # Set objective function for this stage, using the current beta
         opt.set_max_objective(create_objective_function(
             beta=beta_val, 
-            forward_model=compiled_model, 
+            forward_model=forward_model, 
             sim_params=sim_params, 
             opt_params=opt_params, 
             forward_model_args=forward_model_args
