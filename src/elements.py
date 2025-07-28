@@ -9,14 +9,18 @@ torch.pi = torch.acos(torch.zeros(1)).item() * 2
 
 @dataclass
 class ArbitraryElement:
+    """
+    An element with arbitrary, spatially varying refractive index.
+    Includes original and new batched methods for applying the element.
+    """
     name: str
     thickness: float
-    elem_map: list[np.ndarray]
-    gap_map: list[np.ndarray]
+    elem_map: list[float]
+    gap_map: list[float]
     x: torch.Tensor
 
     def __str__(self):
-        return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, elem_map={self.elem_map}, gap_map={self.gap_map})"
+        return f"ArbitraryElement(name={self.name}, thickness={self.thickness}, elem_map={self.elem_map}, gap_map={self.gap_map}, x={self.x})"
 
     def __copy__(self):
         return ArbitraryElement(
@@ -24,27 +28,67 @@ class ArbitraryElement:
             thickness=self.thickness, 
             elem_map=self.elem_map, 
             gap_map=self.gap_map, 
-            x=self.x
-            )
+            x=self.x)
 
-    def transmission(self, lam: float, sim_params: SimParams):
+    def transmission(self, lams_tensor: torch.Tensor, sim_params: SimParams) -> torch.Tensor:
+        """
+        Calculates the transmission map for a batch of wavelengths simultaneously.
+
+        Args:
+            lams_tensor (torch.Tensor): A 1D tensor of wavelengths.
+            sim_params (SimParams): Simulation parameters.
+
+        Returns:
+            torch.Tensor: A 3D tensor of transmission maps of shape (num_wavelengths, Ny, Nx).
+        """
+        # x_tensor has shape (Ny, Nx)
         x_tensor = self.x.to(sim_params.device)
-        n_elem = refractive_index_at_wvl(lam, self.elem_map)
-        n_gap = refractive_index_at_wvl(lam, self.gap_map)
-        n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
 
-        zero = torch.zeros(0, dtype=sim_params.dtype, device=sim_params.device)
+        # Calculate refractive indices for all wavelengths at once.
+        # n_elem and n_gap will be 1D tensors of shape (num_wavelengths,).
+        n_elem = refractive_index_at_wvl(lams_tensor, self.elem_map)
+        n_gap = refractive_index_at_wvl(lams_tensor, self.gap_map)
 
-        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=zero.real.dtype, device=sim_params.device)) / lam 
+        # Reshape n_elem and n_gap to (C, 1, 1) to enable broadcasting
+        # with x_tensor, which has shape (H, W).
+        n_elem_b = n_elem.view(-1, 1, 1)
+        n_gap_b = n_gap.view(-1, 1, 1)
+
+        # n_eff will have shape (C, H, W) after broadcasting.
+        n_eff = n_elem_b * x_tensor + n_gap_b * (1 - x_tensor)
+
+        # k0 (wave number) will be a 1D tensor of shape (C,).
+        k0 = 2 * torch.pi / lams_tensor
+
+        # Reshape k0 to (C, 1, 1) for broadcasting and calculate the complex phase.
+        phase = k0.view(-1, 1, 1) * (n_eff - 1) * self.thickness
         
-        return torch.exp(1j * k0 * (n_eff - 1) * self.thickness)
+        # Return the complex transmission map of shape (C, H, W).
+        return torch.exp(1j * phase)
 
-    def apply_element(self, U: torch.Tensor, sim_params: SimParams):
-        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
-        for i, lam in enumerate(sim_params.lams):
-            transmission = self.transmission(lam, sim_params)
-            U_lam = U[i, :, :] * transmission
-            U_f[i, :, :] = U_lam
+    def apply_element(self, U: torch.Tensor, sim_params: SimParams) -> torch.Tensor:
+        """
+        Applies the element to a batch of fields using a single vectorized operation.
+
+        Args:
+            U (torch.Tensor): The input tensor of shape (num_wavelengths, Ny, Nx).
+            sim_params (SimParams): Simulation parameters.
+
+        Returns:
+            torch.Tensor: The output tensor after applying the element.
+        """
+        # Ensure wavelengths are a float tensor on the correct device.
+        lams_tensor = torch.as_tensor(sim_params.lams, dtype=torch.float32, device=sim_params.device)
+
+        # Get the transmission for all wavelengths at once.
+        # The result `transmission` will have shape (C, Ny, Nx).
+        transmission = self.transmission_batched(lams_tensor, sim_params)
+
+        # Apply the transmission to the input tensor U. This is an element-wise
+        # multiplication of two (C, Ny, Nx) tensors.
+        # Ensure dtypes match for the multiplication.
+        U_f = U * transmission.to(U.dtype)
+        
         return U_f
 
     def apply_element_sliced(self, U: torch.Tensor, slice_thickness: float, sim_params: SimParams):
