@@ -17,7 +17,7 @@ def threshold_opt(
     print_results: bool = True
     ) -> np.ndarray:
 
-    compiled_model = torch.compile(forward_model, mode="max-autotune")
+    compiled_model = torch.compile(forward_model, mode="default")
 
     for stage_idx, beta_val in enumerate(beta_schedule, 1):
         if print_results:
