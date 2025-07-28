@@ -158,10 +158,10 @@ def propagate_z_arbg_z_incoherent(
         x=x
     )
 
-    I_f = torch.zeros((Ny, Nx), dtype=torch.complex64, device=device)
-
-    point_source_field = torch.zeros((Ny, Nx), dtype=torch.complex64, device=device)
+    point_source_field = torch.zeros((Ny, Nx), dtype=sim_params.dtype, device=device)
     point_source_field[Ny // 2, Nx // 2] = 1.0
+
+    I_f = torch.zeros((Ny, Nx), dtype=point_source_field.real.dtype, device=device)
 
     for weight, lam in zip(sim_params.weights, sim_params.lams):
 

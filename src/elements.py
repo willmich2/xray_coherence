@@ -32,13 +32,15 @@ class ArbitraryElement:
         n_elem = refractive_index_at_wvl(lam, self.elem_map)
         n_gap = refractive_index_at_wvl(lam, self.gap_map)
         n_eff = n_elem * x_tensor + n_gap * (1 - x_tensor)
-        # Use torch.pi with the correct device
-        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=sim_params.device)) / lam 
+
+        zero = torch.zeros(0, dtype=sim_params.dtype, device=sim_params.device)
+
+        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=zero.real.dtype, device=sim_params.device)) / lam 
         
         return torch.exp(1j * k0 * (n_eff - 1) * self.thickness)
 
     def apply_element(self, U: torch.Tensor, sim_params: SimParams):
-        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
         for i, lam in enumerate(sim_params.lams):
             transmission = self.transmission(lam, sim_params)
             U_lam = U[i, :, :] * transmission
@@ -46,7 +48,7 @@ class ArbitraryElement:
         return U_f
 
     def apply_element_sliced(self, U: torch.Tensor, slice_thickness: float, sim_params: SimParams):
-        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
         
         for i, lam in enumerate(sim_params.lams):
             t = self.thickness
@@ -94,7 +96,9 @@ class ZonePlate:
         the minimum feature size. Beyond this radius, the transmission is
         that of the gap material.
         """
-        pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=sim_params.device))
+        zero = torch.zeros(0, dtype=sim_params.dtype, device=sim_params.device)
+        pi = torch.acos(torch.tensor(-1.0, dtype=zero.real.dtype, device=sim_params.device))
+        
         n_elem = refractive_index_at_wvl(lam_inc, self.elem_map)
         n_gap = refractive_index_at_wvl(lam_inc, self.gap_map)
         
@@ -128,7 +132,7 @@ class ZonePlate:
         return transmission
 
     def apply_element(self, U: torch.Tensor, sim_params: SimParams):
-        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
         # zone plate profile changes with wavelength, so we need to use the maximum wavelength to maintain a constant profile
         max_lam = sim_params.lams[np.argmax(sim_params.weights)]
         for i, lam in enumerate(sim_params.lams):
@@ -138,7 +142,7 @@ class ZonePlate:
         return U_f
 
     def apply_element_sliced(self, U: torch.Tensor, slice_thickness: float, sim_params: SimParams):
-        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+        U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
 
         max_lam = sim_params.lams[np.argmax(sim_params.weights)]
         
@@ -177,7 +181,9 @@ class RectangularElement:
         thickness_tensor = torch.where(torch.abs(params.X) > self.length/2, 0, thickness_tensor)
         thickness_tensor = torch.where(torch.abs(params.Y) > self.width/2, 0, thickness_tensor)
         n_eff = n_elem * thickness_tensor
-        # Use torch.pi with the correct device
-        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=params.device)) / lam 
+
+        zero = torch.zeros(0, dtype=params.dtype, device=params.device)
+
+        k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=zero.real.dtype, device=params.device)) / lam 
         
         return torch.exp(1j * k0 * n_eff)

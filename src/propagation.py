@@ -16,11 +16,11 @@ def angular_spectrum_propagation(
 
     Ny_padded, Nx_padded = U_padded.shape
 
-    pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=device))
+    pi = torch.acos(torch.tensor(-1.0, dtype=U_padded.real.dtype, device=device))
     k0 = 2*pi/lam
 
-    kx = torch.fft.fftfreq(Nx_padded, dx, dtype=torch.float32, device=device) * 2*pi
-    ky = torch.fft.fftfreq(Ny_padded, dx, dtype=torch.float32, device=device) * 2*pi
+    kx = torch.fft.fftfreq(Nx_padded, dx, dtype=U_padded.real.dtype, device=device) * 2*pi
+    ky = torch.fft.fftfreq(Ny_padded, dx, dtype=U_padded.real.dtype, device=device) * 2*pi
     KY, KX = torch.meshgrid(ky, kx, indexing='ij')
 
     sqrt_arg = k0**2 - KX**2 - KY**2
@@ -40,7 +40,7 @@ def propagate_z(
     sim_params: SimParams
     ) -> torch.Tensor:
     
-    Uz = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+    Uz = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
 
     for i, lam in enumerate(sim_params.lams):
         Uz_lam = angular_spectrum_propagation(U[i, :, :], lam, z, sim_params.dx, sim_params.device)
@@ -104,7 +104,7 @@ def apply_element(
     element, 
     sim_params: SimParams
     ) -> torch.Tensor:
-    U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+    U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
     max_lam = sim_params.lams[np.argmax(sim_params.weights)]
     transmission = element.transmission(max_lam, sim_params)
 
@@ -121,7 +121,7 @@ def apply_element_sliced(
     sim_params: SimParams
     ) -> torch.Tensor:
     
-    U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=torch.complex64, device=sim_params.device)
+    U_f = torch.zeros((len(sim_params.weights), sim_params.Ny, sim_params.Nx), dtype=U.dtype, device=sim_params.device)
 
     max_lam = sim_params.lams[np.argmax(sim_params.weights)]
     

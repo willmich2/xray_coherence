@@ -15,8 +15,9 @@ def create_objective_function(
         x:    current guess (NumPy array)
         grad: array for gradient output
         """
+        zero = torch.zeros(0, dtype=sim_params.dtype, device=sim_params.device)
         # Convert to PyTorch tensor
-        g = torch.tensor(x, dtype=torch.float32, requires_grad=True)
+        g = torch.tensor(x, dtype=zero.real.dtype, requires_grad=True)
 
         # Apply smooth threshold
         g_thresholded = heaviside_projection(g, beta=beta)
@@ -44,6 +45,6 @@ def heaviside_projection(
     Projects continuous x in [0,1] (approximately) 
     into near-binary values using a smooth approximation of a step function.
     """    
-    numerator = torch.tanh(beta * (x - eta)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=torch.float32, requires_grad=True))
-    denominator = torch.tanh(torch.tensor(beta * (1 - eta), device=x.device, dtype=torch.float32, requires_grad=True)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=torch.float32, requires_grad=True))
+    numerator = torch.tanh(beta * (x - eta)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=x.dtype, requires_grad=True))
+    denominator = torch.tanh(torch.tensor(beta * (1 - eta), device=x.device, dtype=x.dtype, requires_grad=True)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=x.dtype, requires_grad=True))
     return numerator / denominator
