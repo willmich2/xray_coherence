@@ -27,6 +27,7 @@ def kramers_law_weights(
         filter_thickness: float = 1e-3,
         uniform_energy: bool = True, # if True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
         weight_cutoff: float = 1e-2,
+        device: torch.device = torch.device("cpu")
 ) -> Tuple[np.ndarray, np.ndarray]: 
     """
     Calculate the spectral weights according to Kramer's law. The input energies are in eV and 
@@ -59,7 +60,7 @@ def kramers_law_weights(
     lams = lams[weights > weight_cutoff]
     weights = weights[weights > weight_cutoff]
 
-    return lams, weights
+    return torch.tensor(lams, dtype=torch.float32, device=device), torch.tensor(weights, dtype=torch.float32, device=device)
 
 def create_material_map(
         material_name: str, 
