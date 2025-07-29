@@ -44,6 +44,8 @@ def threshold_opt(
         # Limit the number of function evaluations per stage
         opt.set_maxeval(max_eval_per_stage)
 
+        opt.set_param("inner_maxeval", opt_params["inner_maxeval"])
+
         # Perform the optimization
         x_init = opt.optimize(x_init)
 

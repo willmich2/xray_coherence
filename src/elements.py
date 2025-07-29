@@ -171,7 +171,6 @@ class ZonePlate:
         transmission = torch.where(R <= R_cutoff,
                                    zp_pattern,
                                    trans_gap)
-        # --- MODIFICATION END ---
         
         return transmission
 
