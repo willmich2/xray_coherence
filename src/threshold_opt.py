@@ -1,4 +1,3 @@
-import torch # type: ignore
 import numpy as np # type: ignore
 import nlopt # type: ignore
 from src.inversedesign_utils import create_objective_function # type: ignore

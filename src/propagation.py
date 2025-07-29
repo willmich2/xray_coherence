@@ -1,8 +1,6 @@
 import torch # type: ignore
 import torch.nn.functional as F # type: ignore
-import numpy as np # type: ignore
 from src.simparams import SimParams
-from src.util import refractive_index_at_wvl
 
 def angular_spectrum_propagation(
     U: torch.Tensor,

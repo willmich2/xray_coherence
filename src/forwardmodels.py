@@ -1,10 +1,8 @@
 import torch # type: ignore
-import numpy as np # type: ignore
 from src.propagation import propagate_z, angular_spectrum_propagation
 from src.sources import plane_wave, gaussian_source
 from src.elements import ArbitraryElement
 from src.simparams import SimParams
-from src.montecarlo import mc_propagate
 
 # TODO: 
 # - [] probably get rid of mc_propagate since we are modeling incoherence with the OTF
