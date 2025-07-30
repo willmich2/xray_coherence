@@ -2,6 +2,8 @@ import numpy as np # type: ignore
 import pandas as pd # type: ignore
 import torch # type: ignore
 from typing import Tuple
+from elements import ZonePlate
+from simparams import SimParams
 
 
 al_data_energies = np.array([
@@ -62,6 +64,7 @@ def kramers_law_weights(
 
     return torch.tensor(lams, dtype=torch.float32, device=device), torch.tensor(weights, dtype=torch.float32, device=device)
 
+
 def create_material_map(
         material_name: str, 
 ) -> list[np.ndarray]:
@@ -72,6 +75,7 @@ def create_material_map(
    n = df_n["n"].to_numpy()
    return [wavelengths, n + 1j*k]
 
+
 def refractive_index_at_wvl(
         wvl: torch.Tensor, 
         material_map: list[np.ndarray], 
@@ -81,3 +85,24 @@ def refractive_index_at_wvl(
         wvl_np = wvl.cpu().numpy()
         return torch.tensor(np.interp(wvl_np, wavelengths, refractive_indices), dtype=torch.complex64, device=wvl.device)
 
+
+def zp_init(
+        lam: float, 
+        f: float, 
+        min_feature_size: float, 
+        sim_params: SimParams, 
+        opt_params: dict
+) -> np.ndarray:
+    zone_plate = ZonePlate(
+        name = "zp_init", 
+        thickness = 1, 
+        f = f,
+        min_feature_size = min_feature_size, 
+        elem_map = [np.array([0, np.inf]), np.array([1., 1.])], 
+        gap_map = [np.array([0, np.inf]), np.array([1 + 1j*np.inf, 1 + 1j*np.inf])]
+    )
+
+    zp_trans = zone_plate.transmission(lam, lam, sim_params).abs()
+    zp_init = torch.where(zp_trans > 0.5, 1.0, 0.0).cpu().reshape(sim_params.Nx)[::opt_params["n"]]
+    zp_init = zp_init[:zp_init.shape[0]//2].numpy()
+    return zp_init
