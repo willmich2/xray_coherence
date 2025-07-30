@@ -76,13 +76,13 @@ def threshold_opt(
 
 def x_I_opt(
         design_dict: dict, 
-        forward_model: Callable
         ) -> tuple[np.ndarray, np.ndarray, float]:
     sim_params = design_dict["sim_params"]
     elem_params = design_dict["elem_params"]
     opt_params = design_dict["opt_params"]
     args = design_dict["args"]
     x_init = design_dict["x_init"]
+    fwd_model = design_dict["forward_model"]
     
     method = opt_params["method"]
     betas = opt_params["betas"]
@@ -91,7 +91,7 @@ def x_I_opt(
     opt_x, final_obj = threshold_opt(
         sim_params = sim_params, 
         opt_params = opt_params,
-        forward_model = forward_model, 
+        forward_model = fwd_model, 
         forward_model_args = args, 
         beta_schedule = betas, 
         max_eval_per_stage = max_eval, 
