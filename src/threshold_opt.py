@@ -1,8 +1,10 @@
 import numpy as np # type: ignore
+import torch # type: ignore
 import nlopt # type: ignore
-from src.inversedesign_utils import create_objective_function # type: ignore
-from src.simparams import SimParams
 from typing import Callable
+from src.inversedesign_utils import create_objective_function, heaviside_projection
+from src.simparams import SimParams
+from src.propagation import field_z_arbg_z
 
 def threshold_opt(
     sim_params: SimParams, 
@@ -70,3 +72,64 @@ def threshold_opt(
         print(f"Threshold obj = {(threshold_obj):.4f}")
 
     return x_init, threshold_obj
+
+
+def x_I_opt(
+        design_dict: dict, 
+        forward_model: Callable
+        ) -> tuple[np.ndarray, np.ndarray, float]:
+    sim_params = design_dict["sim_params"]
+    elem_params = design_dict["elem_params"]
+    opt_params = design_dict["opt_params"]
+    args = design_dict["args"]
+    x_init = design_dict["x_init"]
+    
+    method = opt_params["method"]
+    betas = opt_params["betas"]
+    max_eval = opt_params["max_eval"]
+    
+    opt_x, final_obj = threshold_opt(
+        sim_params = sim_params, 
+        opt_params = opt_params,
+        forward_model = forward_model, 
+        forward_model_args = args, 
+        beta_schedule = betas, 
+        max_eval_per_stage = max_eval, 
+        method = method,
+        x_init = x_init, 
+        print_results = False
+        )
+    
+    opt_x_proj = heaviside_projection(torch.tensor(opt_x), beta = np.inf, eta = 0.5)
+    
+    init_params = SimParams(
+        Ny=1, 
+        Nx=sim_params.Nx//opt_params["n"], 
+        dx=sim_params.dx*opt_params["n"],
+        device=sim_params.device, 
+        dtype=sim_params.dtype,
+        lams=sim_params.lams, 
+        weights=sim_params.weights
+    )
+    
+    opt_x_full = torch.repeat_interleave(
+        torch.cat((opt_x_proj, torch.flip(opt_x_proj, dims=(0,)))).reshape(1, init_params.Nx), 
+        opt_params["n"], 
+        dim=1
+        )
+    
+    U_opt = field_z_arbg_z(
+        x = opt_x_full, 
+        sim_params = sim_params, 
+        elem_params = elem_params, 
+        z = args[-1]
+        )
+    
+    opt_x_full = opt_x_full.detach().cpu().numpy()
+    
+    weights_t = sim_params.weights.view(-1, 1, 1)
+    
+    # Calculate weighted sum of intensities
+    I_opt = torch.sum((U_opt.abs()**2) * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
+        
+    return opt_x_full, I_opt, final_obj
