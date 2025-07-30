@@ -56,9 +56,9 @@ def kramers_law_weights(
                 weights = np.exp(-filter_thickness*interp_coeffs) * weights
     # ensure weights sum to 1
     weights /= np.sum(weights)
-    # if a weight is less than weight_cutoff, remove it from the list
-    lams = lams[weights > weight_cutoff]
-    weights = weights[weights > weight_cutoff]
+#     # if a weight is less than weight_cutoff, remove it from the list
+#     lams = lams[weights > weight_cutoff]
+#     weights = weights[weights > weight_cutoff]
 
     return torch.tensor(lams, dtype=torch.float32, device=device), torch.tensor(weights, dtype=torch.float32, device=device)
 
