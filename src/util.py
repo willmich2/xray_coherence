@@ -2,8 +2,6 @@ import numpy as np # type: ignore
 import pandas as pd # type: ignore
 import torch # type: ignore
 from typing import Tuple
-from src.elements import ZonePlate
-from src.simparams import SimParams
 
 
 al_data_energies = np.array([
