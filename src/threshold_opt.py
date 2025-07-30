@@ -4,7 +4,7 @@ import nlopt # type: ignore
 from typing import Callable
 from src.inversedesign_utils import create_objective_function, heaviside_projection
 from src.simparams import SimParams
-from src.propagation import field_z_arbg_z
+from src.forwardmodels import field_z_arbg_z
 
 def threshold_opt(
     sim_params: SimParams, 
