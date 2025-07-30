@@ -2,6 +2,7 @@ import torch # type: ignore
 import numpy as np # type: ignore
 from typing import Callable
 from src.simparams import SimParams
+from src.elements import ZonePlate
 
 def create_objective_function(
     beta: float, 
@@ -48,3 +49,25 @@ def heaviside_projection(
     numerator = torch.tanh(beta * (x - eta)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=x.dtype, requires_grad=True))
     denominator = torch.tanh(torch.tensor(beta * (1 - eta), device=x.device, dtype=x.dtype, requires_grad=True)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=x.dtype, requires_grad=True))
     return numerator / denominator
+
+
+def zp_init(
+        lam: float, 
+        f: float, 
+        min_feature_size: float, 
+        sim_params: SimParams, 
+        opt_params: dict
+) -> np.ndarray:
+    zone_plate = ZonePlate(
+        name = "zp_init", 
+        thickness = 1, 
+        f = f,
+        min_feature_size = min_feature_size, 
+        elem_map = [np.array([0, np.inf]), np.array([1., 1.])], 
+        gap_map = [np.array([0, np.inf]), np.array([1 + 1j*np.inf, 1 + 1j*np.inf])]
+    )
+
+    zp_trans = zone_plate.transmission(lam, lam, sim_params).abs()
+    zp_init = torch.where(zp_trans > 0.5, 1.0, 0.0).cpu().reshape(sim_params.Nx)[::opt_params["n"]]
+    zp_init = zp_init[:zp_init.shape[0]//2].numpy()
+    return zp_init
