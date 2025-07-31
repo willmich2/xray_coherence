@@ -129,3 +129,63 @@ def refractive_index_at_wvl(
         refractive_indices = material_map[1]
         wvl_np = wvl.cpu().numpy()
         return torch.tensor(np.interp(wvl_np, wavelengths, refractive_indices), dtype=torch.complex64, device=wvl.device)
+
+
+def spherize_1d_array(radial_profile: np.ndarray) -> np.ndarray:
+    """
+    Expands a 1D radial profile into a 2D array with circular symmetry.
+
+    This function takes a 1D array, representing function values along a radius,
+    and generates a 2D square array where the value of each pixel is determined
+    by its radial distance from the center. This effectively "rotates" the 1D
+    profile around the center to fill a 2D space.
+
+    Args:
+        radial_profile: A 1D NumPy array of size N representing the function's
+                        values along a radius.
+
+    Returns:
+        A 2D NumPy array of shape (2*N-1, 2*N-1) representing the
+        circularly symmetric function.
+    """
+    # Get the radius N from the length of the input array.
+
+    if radial_profile.ndim != 1:
+        radial_profile = radial_profile.reshape(-1)
+    n = radial_profile.shape[0]
+    
+    # The output 2D array will have a side length of 2*N - 1 to ensure a single center pixel.
+    diameter = 2 * n - 1
+    
+    # Define the center of the 2D array.
+    center_x, center_y = n - 1, n - 1
+
+    # Create coordinate grids.
+    # np.arange(diameter) creates an array [0, 1, ..., diameter-1].
+    # Subtracting the center coordinate shifts the grid so the center is at (0,0).
+    x = np.arange(diameter) - center_x
+    y = np.arange(diameter) - center_y
+    xx, yy = np.meshgrid(x, y)
+
+    # Calculate the Euclidean distance (radius) from the center for every point in the grid.
+    radius_grid = np.sqrt(xx**2 + yy**2)
+
+    # Round the distances to the nearest integer to use them as indices
+    # for the input radial_profile array.
+    index_grid = np.round(radius_grid).astype(int)
+
+    # Create an output array, initialized with a fill value (e.g., 0).
+    # The data type is matched to the input array's type.
+    # Using float allows for potential future use with NaN or interpolation.
+    output_2d = np.zeros((diameter, diameter), dtype=radial_profile.dtype)
+
+    # Create a mask for all pixels that are within the original radius N.
+    valid_mask = index_grid < n
+
+    # Use the index_grid to look up the corresponding values from the radial_profile.
+    # This is an advanced indexing operation. For every `True` position in `valid_mask`,
+    # we take the corresponding integer from `index_grid` and use it as an index
+    # into `radial_profile`. The resulting value is placed in the `output_2d` array.
+    output_2d[valid_mask] = radial_profile[index_grid[valid_mask]]
+
+    return output_2d

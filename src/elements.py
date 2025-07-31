@@ -28,7 +28,8 @@ class ArbitraryElement:
             thickness=self.thickness, 
             elem_map=self.elem_map, 
             gap_map=self.gap_map, 
-            x=self.x)
+            x=self.x
+            )
 
     def transmission(self, lams_tensor: torch.Tensor, sim_params: SimParams) -> torch.Tensor:
         """
@@ -41,8 +42,14 @@ class ArbitraryElement:
         Returns:
             torch.Tensor: A 3D tensor of transmission maps of shape (num_wavelengths, Ny, Nx).
         """
-        # x_tensor has shape (Ny, Nx)
+        
         x_tensor = self.x.to(sim_params.device)
+        # x_tensor could be smaller than (Ny, Nx), so we need to pad it with zeros
+        pad_left = (sim_params.Nx - x_tensor.shape[1]) // 2
+        pad_right = sim_params.Nx - x_tensor.shape[1] - pad_left
+        pad_top = (sim_params.Ny - x_tensor.shape[0]) // 2
+        pad_bottom = sim_params.Ny - x_tensor.shape[0] - pad_top
+        x_tensor = torch.nn.functional.pad(x_tensor, (pad_left, pad_right, pad_top, pad_bottom))
 
         # Calculate refractive indices for all wavelengths at once.
         # n_elem and n_gap will be 1D tensors of shape (num_wavelengths,).

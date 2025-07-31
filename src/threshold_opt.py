@@ -15,7 +15,7 @@ def threshold_opt(
     max_eval_per_stage: int, 
     method,
     x_init: np.ndarray, 
-    print_results: bool = True
+    print_results: bool = True  
     ) -> np.ndarray:
 
     # compiled_model = torch.compile(forward_model, mode="default")
@@ -25,7 +25,7 @@ def threshold_opt(
             print(f"\n--- Stage {stage_idx} with beta = {beta_val} ---")
 
         # Create NLopt optimizer
-        n = int(sim_params.Nx // opt_params["n"] // 2)
+        n = x_init.shape[0]
         opt = nlopt.opt(method, n)
         
         # Set objective function for this stage, using the current beta
@@ -81,8 +81,9 @@ def x_I_opt(
     elem_params = design_dict["elem_params"]
     opt_params = design_dict["opt_params"]
     args = design_dict["args"]
-    x_init = design_dict["x_init"]
-    fwd_model = design_dict["forward_model"]
+
+    x_init = opt_params["x_init"]
+    fwd_model = opt_params["forward_model"]
     
     method = opt_params["method"]
     betas = opt_params["betas"]
