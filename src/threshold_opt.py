@@ -125,6 +125,7 @@ def x_I_opt(
         z = args[-1]
         )
     
+    opt_x = opt_x_proj.detach().cpu().numpy()
     opt_x_full = opt_x_full.detach().cpu().numpy()
     
     weights_t = sim_params.weights.view(-1, 1, 1)
@@ -132,4 +133,4 @@ def x_I_opt(
     # Calculate weighted sum of intensities
     I_opt = torch.sum((U_opt.abs()**2) * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
         
-    return opt_x_proj, opt_x_full, I_opt, final_obj
+    return opt_x, opt_x_full, I_opt, final_obj
