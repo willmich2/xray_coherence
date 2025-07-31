@@ -64,26 +64,29 @@ def angular_spectrum_propagation(
     # torch.fft.fft2 and ifft2 operate on the last two dimensions by default,
     # correctly handling the batch dimension.
     if U_padded.shape[1] == 1:
-        U_padded_squeezed = U_padded.squeeze()
+        U_padded_squeezed = U_padded.squeeze(1)
         del U_padded
 
-        transfer_function_squeezed = transfer_function.squeeze()
+        transfer_function_squeezed = transfer_function.squeeze(1)
         del transfer_function
 
         U_fourier = torch.fft.fft(U_padded_squeezed)
         del U_padded_squeezed
 
-        U_z_padded = torch.fft.ifft(U_fourier * transfer_function_squeezed)
-        del U_fourier
+        U_fourier.mul_(transfer_function_squeezed)
         del transfer_function_squeezed
-        
+
+        U_z_padded = torch.fft.ifft(U_fourier)
+        del U_fourier
+
         U_z_padded = U_z_padded.unsqueeze(1)
     else:
         U_fourier = torch.fft.fft2(U_padded)
         del U_padded
-        U_z_padded = torch.fft.ifft2(U_fourier * transfer_function)
-        del U_fourier
+        U_fourier.mul_(transfer_function)
         del transfer_function
+        U_z_padded = torch.fft.ifft2(U_fourier)
+        del U_fourier
 
     # Unpad the result to the original spatial dimensions.
     U_z = unpad_half_width(U_z_padded)
