@@ -105,7 +105,7 @@ def x_I_opt(
     
     init_params = SimParams(
         Ny=1, 
-        Nx=x_init.shape[0], 
+        Nx=x_init.shape[0]*2, 
         dx=sim_params.dx*opt_params["n"],
         device=sim_params.device, 
         dtype=sim_params.dtype,
