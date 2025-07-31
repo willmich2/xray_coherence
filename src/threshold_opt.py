@@ -105,7 +105,7 @@ def x_I_opt(
     
     init_params = SimParams(
         Ny=1, 
-        Nx=sim_params.Nx//opt_params["n"], 
+        Nx=x_init.shape[0], 
         dx=sim_params.dx*opt_params["n"],
         device=sim_params.device, 
         dtype=sim_params.dtype,
@@ -118,6 +118,11 @@ def x_I_opt(
         opt_params["n"], 
         dim=1
         )
+    
+    # pad opt_x_full to (Ny, Nx)
+    pad_left = (sim_params.Nx - opt_x_full.shape[1]) // 2
+    pad_right = sim_params.Nx - opt_x_full.shape[1] - pad_left
+    opt_x_full = torch.nn.functional.pad(opt_x_full, (pad_left, pad_right, 0, 0))
     
     U_opt = field_z_arbg_z(
         x = opt_x_full, 
