@@ -63,7 +63,7 @@ def angular_spectrum_propagation(
     # --- Apply Propagation in Fourier Domain ---
     # torch.fft.fft2 and ifft2 operate on the last two dimensions by default,
     # correctly handling the batch dimension.
-    if U.shape[1] == 1:
+    if U_padded.shape[1] == 1:
         U_padded = U_padded.squeeze()
         U_fourier = torch.fft.fft(U_padded)
         del U_padded
