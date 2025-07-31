@@ -60,10 +60,14 @@ def angular_spectrum_propagation(
     # torch.fft.fft2 and ifft2 operate on the last two dimensions by default,
     # correctly handling the batch dimension.
     U_fourier = torch.fft.fft2(U_padded)
+    del U_padded
     U_z_padded = torch.fft.ifft2(U_fourier * transfer_function)
+    del U_fourier
+    del transfer_function
 
     # Unpad the result to the original spatial dimensions.
     U_z = unpad_half_width(U_z_padded)
+    del U_z_padded
     
     # Return the full complex field to preserve phase information.
     return U_z
