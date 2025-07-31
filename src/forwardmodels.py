@@ -19,11 +19,15 @@ def propagate_z_arbg_z(
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
     """
     Uz = propagate_z(U, z, sim_params)
+    del U
+
     Uzg = element.apply_element(Uz, sim_params)
     del Uz
+
     Uzgz = propagate_z(Uzg, z, sim_params)
     del Uzg
     del element
+
     return Uzgz
 
 def field_z_arbg_z(
@@ -103,6 +107,7 @@ def forward_model_focus_plane_wave_power(
     # calculated intensity by summing over wavelengths, weighted by weights
     weights_t = sim_params.weights.view(-1, 1, 1)
     I_out = torch.sum(Uzgz.abs().pow(2) * weights_t, dim=0).reshape(sim_params.Nx)
+    del Uzgz
     
     P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
 
