@@ -20,7 +20,10 @@ def propagate_z_arbg_z(
     """
     Uz = propagate_z(U, z, sim_params)
     Uzg = element.apply_element(Uz, sim_params)
+    del Uz
     Uzgz = propagate_z(Uzg, z, sim_params)
+    del Uzg
+    del element
     return Uzgz
 
 def field_z_arbg_z(

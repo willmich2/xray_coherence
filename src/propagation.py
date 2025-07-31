@@ -48,6 +48,8 @@ def angular_spectrum_propagation(
     # Broadcasting (batch, 1, 1) with (Ny_padded, Nx_padded) results in (batch, Ny_padded, Nx_padded).
     sqrt_arg = k0**2 - KX**2 - KY**2
     
+    del KX
+    del KY
     # Let torch.sqrt handle the complex argument. This correctly models both
     # propagating waves (real sqrt) and evanescent waves (imaginary sqrt).
     kz = torch.sqrt(sqrt_arg)
