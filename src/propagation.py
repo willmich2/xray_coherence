@@ -64,14 +64,19 @@ def angular_spectrum_propagation(
     # torch.fft.fft2 and ifft2 operate on the last two dimensions by default,
     # correctly handling the batch dimension.
     if U_padded.shape[1] == 1:
-        U_padded = U_padded.squeeze()
-        transfer_function = transfer_function.squeeze()
-        U_fourier = torch.fft.fft(U_padded)
+        U_padded_squeezed = U_padded.squeeze()
         del U_padded
 
-        U_z_padded = torch.fft.ifft(U_fourier * transfer_function)
-        del U_fourier
+        transfer_function_squeezed = transfer_function.squeeze()
         del transfer_function
+
+        U_fourier = torch.fft.fft(U_padded_squeezed)
+        del U_padded_squeezed
+
+        U_z_padded = torch.fft.ifft(U_fourier * transfer_function_squeezed)
+        del U_fourier
+        del transfer_function_squeezed
+        
         U_z_padded = U_z_padded.unsqueeze(1)
     else:
         U_fourier = torch.fft.fft2(U_padded)
