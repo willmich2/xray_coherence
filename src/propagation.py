@@ -65,6 +65,7 @@ def angular_spectrum_propagation(
     # correctly handling the batch dimension.
     if U_padded.shape[1] == 1:
         U_padded = U_padded.squeeze()
+        transfer_function = transfer_function.squeeze()
         U_fourier = torch.fft.fft(U_padded)
         del U_padded
 
