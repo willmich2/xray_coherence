@@ -25,6 +25,7 @@ def angular_spectrum_propagation(
     # Pad the input field to avoid aliasing from circular convolution.
     # Assumes pad_double_width correctly pads the last two (spatial) dimensions.
     U_padded = pad_double_width(U)
+    del U
     batch_size, Ny_padded, Nx_padded = U_padded.shape
 
     # --- Setup constants and coordinates ---
@@ -47,22 +48,24 @@ def angular_spectrum_propagation(
     # The core calculation is now batched.
     # Broadcasting (batch, 1, 1) with (Ny_padded, Nx_padded) results in (batch, Ny_padded, Nx_padded).
     sqrt_arg = k0**2 - KX**2 - KY**2
-    
     del KX
     del KY
+
     # Let torch.sqrt handle the complex argument. This correctly models both
     # propagating waves (real sqrt) and evanescent waves (imaginary sqrt).
     kz = torch.sqrt(sqrt_arg)
+    del sqrt_arg
     
     # The transfer function is now a batch of functions, one for each wavelength.
     # Shape: (batch, Ny_padded, Nx_padded)
     transfer_function = torch.exp(1j * z * kz)
-
+    del kz
     # --- Apply Propagation in Fourier Domain ---
     # torch.fft.fft2 and ifft2 operate on the last two dimensions by default,
     # correctly handling the batch dimension.
     U_fourier = torch.fft.fft2(U_padded)
     del U_padded
+    
     U_z_padded = torch.fft.ifft2(U_fourier * transfer_function)
     del U_fourier
     del transfer_function
