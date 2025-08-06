@@ -91,7 +91,7 @@ def x_I_opt(
         print_results = False
         )
 
-    final_obj = fwd_model(torch.tensor(opt_x), sim_params, opt_params, *args)
+    final_obj = fwd_model(torch.tensor(opt_x), sim_params, opt_params, *args).cpu().numpy()
     
     opt_x_proj = heaviside_projection(torch.tensor(opt_x), beta = np.inf, eta = 0.5)
     
