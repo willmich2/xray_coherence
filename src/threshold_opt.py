@@ -61,17 +61,7 @@ def threshold_opt(
         if print_results:
             print(f"Stage {stage_idx} finished. obj = {(final_obj):.4f}")
     
-    threshold_obj = create_objective_function(
-            beta=np.inf, 
-            forward_model=forward_model, 
-            sim_params=sim_params, 
-            opt_params=opt_params, 
-            forward_model_args=forward_model_args
-            )(x_init, np.array([]))
-    if print_results:
-        print(f"Threshold obj = {(threshold_obj):.4f}")
-
-    return x_init, threshold_obj
+    return x_init
 
 
 def x_I_opt(
@@ -89,7 +79,7 @@ def x_I_opt(
     betas = opt_params["betas"]
     max_eval = opt_params["max_eval"]
     
-    opt_x, final_obj = threshold_opt(
+    opt_x = threshold_opt(
         sim_params = sim_params, 
         opt_params = opt_params,
         forward_model = fwd_model, 
@@ -100,6 +90,8 @@ def x_I_opt(
         x_init = x_init, 
         print_results = False
         )
+
+    final_obj = fwd_model(opt_x, sim_params, opt_params, args)
     
     opt_x_proj = heaviside_projection(torch.tensor(opt_x), beta = np.inf, eta = 0.5)
     
