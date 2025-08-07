@@ -45,7 +45,7 @@ def kramers_law_weights(
         e_min: float,
         e_max: float,
         N: int,
-        filter: bool = True,
+        filter_weights: bool = True,
         filter_thickness: float = 1e-3,
         filter_material: str = "al",
         uniform_energy: bool = True, # if True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
@@ -66,7 +66,7 @@ def kramers_law_weights(
         energies  = np.linspace(e_min, e_max, N)
         lams = h * c / energies
         weights = e_max / energies - 1
-        if filter:
+        if filter_weights:
             if filter_material == "al":
                 interp_coeffs = np.interp(energies, al_data_energies, al_mass_att_coeffs)
             elif filter_material == "w":
@@ -75,7 +75,7 @@ def kramers_law_weights(
     else:
         lams = np.linspace(lam_min, lam_max, N)
         weights = (lams / lam_min - 1) / lams**2
-        if filter:
+        if filter_weights:
             if filter_material == "al":
                 al_data_lams = np.flip(h * c / al_data_energies)
                 interp_coeffs = np.interp(lams, al_data_lams, al_mass_att_coeffs)
