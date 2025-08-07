@@ -18,13 +18,36 @@ al_mass_att_coeffs = np.array([
     1.704e-01, 1.378e-01, 1.223e-01
 ]) * 270 # convert to m^-1
 
+w_data_energies = np.array([
+    1.00000e-03, 1.50000e-03, 1.80920e-03, 1.84000e-03, 1.87160e-03,
+       1.87160e-03, 1.91960e-03, 2.00000e-03, 2.28100e-03, 2.28100e-03,
+       2.42350e-03, 2.57490e-03, 2.57490e-03, 2.69447e-03, 2.81960e-03,
+       2.81960e-03, 3.00000e-03, 4.00000e-03, 5.00000e-03, 6.00000e-03,
+       8.00000e-03, 1.00000e-02, 1.02068e-02, 1.02068e-02, 1.08548e-02,
+       1.15440e-02, 1.15440e-02, 1.18186e-02, 1.20990e-02, 1.20990e-02,
+       1.50000e-02, 2.00000e-02, 3.00000e-02, 4.00000e-02, 5.00000e-02,
+       6.00000e-02, 6.95250e-02, 6.95250e-02, 8.00000e-02, 1.00000e-01,
+       1.50000e-01, 2.00000e-01
+]) * 1e6 # convert to eV
+
+w_mass_att_coeffs = np.array([
+    3.683e+03, 1.643e+03, 1.108e+03, 1.927e+03, 1.991e+03, 2.901e+03,
+       3.149e+03, 3.922e+03, 2.828e+03, 3.279e+03, 2.833e+03, 2.485e+03,
+       3.599e+03, 2.339e+03, 2.104e+03, 2.193e+03, 1.902e+03, 9.564e+02,
+       5.534e+02, 3.514e+02, 1.786e+02, 9.691e+01, 9.201e+01, 2.134e+02,
+       1.983e+02, 1.689e+02, 2.311e+02, 2.268e+02, 2.065e+02, 2.332e+02,
+       1.389e+02, 6.512e+01, 2.273e+01, 1.067e+01, 5.940e+00, 3.713e+00,
+       2.552e+00, 1.175e+01, 7.810e+00, 4.438e+00, 1.481e+00, 7.844e-01,
+       3.538e-01, 1.929e-01, 1.378e-01, 1.003e-01, 8.066e-02, 6.618e-02
+]) * 1930 # convert to m^-1
 
 def kramers_law_weights(
         e_min: float,
         e_max: float,
         N: int,
-        filter_al: bool = True,
+        filter: bool = True,
         filter_thickness: float = 1e-3,
+        filter_material: str = "al",
         uniform_energy: bool = True, # if True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
         device: torch.device = torch.device("cpu")
 ) -> Tuple[np.ndarray, np.ndarray]: 
@@ -43,15 +66,23 @@ def kramers_law_weights(
         energies  = np.linspace(e_min, e_max, N)
         lams = h * c / energies
         weights = e_max / energies - 1
-        if filter_al:
+        if filter:
+            if filter_material == "al":
                 interp_coeffs = np.interp(energies, al_data_energies, al_mass_att_coeffs)
+            elif filter_material == "w":
+                interp_coeffs = np.interp(energies, w_data_energies, w_mass_att_coeffs)
                 weights = np.exp(-filter_thickness*interp_coeffs) * weights
     else:
         lams = np.linspace(lam_min, lam_max, N)
         weights = (lams / lam_min - 1) / lams**2
-        if filter_al:
+        if filter:
+            if filter_material == "al":
                 al_data_lams = np.flip(h * c / al_data_energies)
                 interp_coeffs = np.interp(lams, al_data_lams, al_mass_att_coeffs)
+                weights = np.exp(-filter_thickness*interp_coeffs) * weights
+            elif filter_material == "w":
+                w_data_lams = np.flip(h * c / w_data_energies)
+                interp_coeffs = np.interp(lams, w_data_lams, w_mass_att_coeffs)
                 weights = np.exp(-filter_thickness*interp_coeffs) * weights
     # ensure weights sum to 1
     weights /= np.sum(weights)
