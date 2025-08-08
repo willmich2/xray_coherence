@@ -20,7 +20,7 @@ def plane_wave(sim_params: SimParams) -> torch.Tensor:
     return U_init
 
 
-def circ_mutual_intensity_sparse_efficient(
+def circ_mutual_intensity_sparse(
     sim_params: SimParams,
     lam: float, 
     r: float, 
