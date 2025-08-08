@@ -46,22 +46,22 @@ def circ_mutual_intensity(
 
 
 def inocherent_source(sim_params: SimParams, rsrc: float, z: float, N: int, sparse_tol: float) -> torch.Tensor:
-  modes = torch.zeros((sim_params.weights.shape[0], N, sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
-  evals = torch.zeros((sim_params.weights.shape[0], N), dtype=sim_params.dtype, device=sim_params.device)
+    modes = torch.zeros((sim_params.weights.shape[0], N, sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
+    evals = torch.zeros((sim_params.weights.shape[0], N), dtype=sim_params.dtype, device=sim_params.device)
 
-  for i, lam in enumerate(sim_params.lams):
-    J = circ_mutual_intensity(sim_params, lam, rsrc, z)
+    for i, lam in enumerate(sim_params.lams):
+      J = circ_mutual_intensity(sim_params, lam, rsrc, z)
 
-    J[J.abs()< sparse_tol] = 0.0
-    
-    J_sparse = J.to_sparse()
-    
-    evals, evecs = matrix_free_eigsh(J_sparse, N)
-    
-    evals = evals / evals.max()
-    modes[i] = evecs
-    evals[i] = evals
+      J[J.abs()< sparse_tol] = 0.0
+      
+      J_sparse = J.to_sparse()
+      
+      evals, evecs = matrix_free_eigsh(J_sparse, N)
+      
+      evals = evals / evals.max()
+      modes[i] = evecs
+      evals[i] = evals
 
-  modes = modes.transpose(0, 1)
-  evals = evals.transpose(0, 1)
-  return modes, evals
+    modes = modes.transpose(0, 1)
+    evals = evals.transpose(0, 1)
+    return modes, evals
