@@ -113,7 +113,7 @@ def circ_mutual_intensity_sparse(
             
             # This check is technically redundant if bandwidth is precise, but is good practice.
             if np.abs(jinc_val) >= abs_threshold:
-                psi = (np.pi / (lam * z)) * (x_cpu[j]**2 - x_cpu[i]**2).cpu().numpy()
+                psi = (np.pi / (lam * z)) * (x_cpu[j]**2 - x_cpu[i]**2)
                 val_unnormalized = np.exp(-1j * psi) * jinc_val
                 
                 # Normalize the value before adding it to the list.
