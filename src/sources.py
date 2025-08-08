@@ -26,13 +26,11 @@ def circ_mutual_intensity(
     r: float, 
     z: float
 ):
-    X1 = sim_params.X
-    X2 = sim_params.X
+    X1, X2 = torch.meshgrid((sim_params.x, sim_params.x), indexing='ij')
     DX = (X2 - X1).abs()
 
     k = 2*np.pi / lam
     psi = np.pi / (lam*z)*(X2.abs().pow(2) - X1.abs().pow(2))
-
 
     diagonal_mask = torch.eye(DX.shape[0], dtype=bool, device=DX.device)
     DX[diagonal_mask] = 1.0
