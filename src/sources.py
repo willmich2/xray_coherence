@@ -107,12 +107,13 @@ def circ_mutual_intensity_sparse(
         for j in range(i + 1, min(N, i + bandwidth + 1)):
             dx_val = x_cpu[j] - x_cpu[i]
             arg = dx_val * k * r / z
+            arg = arg.cpu().numpy()
             
             jinc_val = scipy.special.jv(1, arg) / arg if arg > 1e-9 else 0.5
             
             # This check is technically redundant if bandwidth is precise, but is good practice.
             if np.abs(jinc_val) >= abs_threshold:
-                psi = (np.pi / (lam * z)) * (x_cpu[j]**2 - x_cpu[i]**2)
+                psi = (np.pi / (lam * z)) * (x_cpu[j]**2 - x_cpu[i]**2).cpu().numpy()
                 val_unnormalized = np.exp(-1j * psi) * jinc_val
                 
                 # Normalize the value before adding it to the list.
