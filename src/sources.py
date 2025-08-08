@@ -91,7 +91,7 @@ def circ_mutual_intensity_sparse(
     
     # Convert the argument cutoff to a maximum spatial distance and then an index bandwidth.
     dx_max = arg_cutoff * z / (k * r)
-    bandwidth = int(np.ceil(dx_max / dx_step.cpu().numpy()))
+    bandwidth = int(np.ceil(dx_max.cpu().numpy() / dx_step.cpu().numpy()))
 
     # --- 4. Build Sparse Matrix Elements in COO Format ---
     rows, cols, vals = [], [], []
