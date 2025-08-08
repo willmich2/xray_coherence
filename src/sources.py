@@ -20,7 +20,7 @@ def plane_wave(sim_params: SimParams) -> torch.Tensor:
     return U_init
 
 
-def circ_mutual_intensity_sparse(
+def circ_mutual_intensity_sparse_efficient(
     sim_params: SimParams,
     lam: float, 
     r: float, 
@@ -29,12 +29,12 @@ def circ_mutual_intensity_sparse(
 ):
     """
     Computes a sparse representation of the mutual intensity function without
-    allocating the full dense matrix in memory.
+    allocating the full dense matrix in memory, using vectorized operations for speed.
 
     This function leverages the fact that the mutual intensity function's
     magnitude decays with distance, meaning the resulting matrix is effectively
     band-diagonal. It calculates the bandwidth of significant values and only
-    computes elements within that band.
+    computes elements within that band using efficient tensor operations.
 
     Args:
         sim_params: An object containing the 1D coordinate tensor `x` and the device.
@@ -55,88 +55,93 @@ def circ_mutual_intensity_sparse(
         raise ValueError("Input tensor sim_params.x must be sorted.")
 
     dx_step = x[1] - x[0]  # Assuming uniform spacing
-    k = 2 * np.pi / lam
+    k = 2 * torch.pi / lam
 
     # --- 2. Determine Normalization Factor and Sparsity Threshold ---
     # The maximum absolute value of the off-diagonal elements is determined by the
     # jinc function J1(x)/x, and its peak is near the smallest spatial separation.
-    arg_at_max = (dx_step * k * r / z).cpu().numpy()
+    arg_at_min_dx = (dx_step * k * r / z).cpu().numpy()
     
     # The jinc function J1(y)/y approaches 0.5 as y->0.
-    if arg_at_max < 1e-6:
+    if arg_at_min_dx < 1e-6:
         max_abs_val = 0.5
     else:
-        max_abs_val = np.abs(scipy.special.jv(1, arg_at_max) / arg_at_max)
+        max_abs_val = np.abs(scipy.special.jv(1, arg_at_min_dx) / arg_at_min_dx)
     
     # This is the absolute value threshold for the un-normalized jinc values.
     abs_threshold = sparse_tol * max_abs_val
 
     # --- 3. Calculate Bandwidth of Significant Elements ---
-    # We need to find the argument `arg_cutoff` for the jinc function where its
-    # value drops below our absolute threshold. We use a numerical solver for this.
     def func_to_solve(arg, target):
-        # Function whose root we want to find: |jinc(arg)| - target = 0
         value = np.abs(scipy.special.jv(1, arg) / arg) if arg > 1e-9 else 0.5
         return value - target
 
-    # Establish a search bracket [a, b] for the root finder.
-    a = arg_at_max
+    a = arg_at_min_dx
     b = a + 1.0 
-    # Expand the bracket until the function value at b is below the target.
     while func_to_solve(b, abs_threshold) > 0:
-        b *= 2
+        b *= 2.0
 
-    # Find the root using a robust numerical method (Brent's method).
     arg_cutoff = scipy.optimize.brentq(func_to_solve, a, b, args=(abs_threshold,))
     
-    # Convert the argument cutoff to a maximum spatial distance and then an index bandwidth.
     dx_max = arg_cutoff * z / (k * r)
-    bandwidth = int(np.ceil(dx_max.cpu().numpy() / dx_step.cpu().numpy()))
+    bandwidth = int(torch.ceil(dx_max.cpu().numpy() / dx_step.cpu().numpy()))
 
-    # --- 4. Build Sparse Matrix Elements in COO Format ---
-    rows, cols, vals = [], [], []
-    x_cpu = x.cpu().numpy() # Use numpy for faster looping and scipy compatibility
-
-    for i in range(N):
-        # The diagonal element is always 1.
-        rows.append(i)
-        cols.append(i)
-        vals.append(torch.tensor(1.0 + 0.0j, dtype=torch.complex64, device=device))
-
-        # Iterate only over the upper band for this row.
-        for j in range(i + 1, min(N, i + bandwidth + 1)):
-            dx_val = x_cpu[j] - x_cpu[i]
-            arg = dx_val * k * r / z
-            arg = arg.cpu().numpy()
-            
-            jinc_val = scipy.special.jv(1, arg) / arg if arg > 1e-9 else 0.5
-            
-            # This check is technically redundant if bandwidth is precise, but is good practice.
-            if np.abs(jinc_val) >= abs_threshold:
-                psi = (np.pi / (lam.cpu().numpy() * z)) * (x_cpu[j]**2 - x_cpu[i]**2)
-                val_unnormalized = np.exp(-1j * psi) * jinc_val
-                
-                # Normalize the value before adding it to the list.
-                val_normalized = torch.tensor(val_unnormalized / max_abs_val, dtype=torch.complex64, device=device)
-                
-                # Add the (i, j) element.
-                rows.append(i)
-                cols.append(j)
-                vals.append(val_normalized)
-
-                # Add the Hermitian conjugate (j, i) element.
-                rows.append(j)
-                cols.append(i)
-                vals.append(val_normalized.conj())
-
-    # --- 5. Create Final Sparse Tensor ---
-    indices = torch.tensor([rows, cols], dtype=torch.long, device=device)
-    values = torch.stack(vals)
+    # --- 4. Vectorized Construction of Off-Diagonal Elements ---
+    # Generate all indices within the band at once
+    band_offsets = torch.arange(1, bandwidth + 1, device=device)
+    base_indices = torch.arange(N, device=device).unsqueeze(1)
     
-    # Create the sparse tensor and coalesce it to sum duplicates and sort indices.
-    J_sparse = torch.sparse_coo_tensor(indices, values, (N, N))
-    return J_sparse.coalesce()
+    # Create row and column indices for the upper band
+    row_indices = base_indices.expand(-1, bandwidth)
+    col_indices = row_indices + band_offsets
+    
+    # Filter out out-of-bounds indices
+    valid_mask = col_indices < N
+    rows_upper = row_indices[valid_mask]
+    cols_upper = col_indices[valid_mask]
 
+    # Calculate distances and arguments for the Bessel function in a vectorized manner
+    x1 = x[rows_upper]
+    x2 = x[cols_upper]
+    dx_vals = x2 - x1
+    args = dx_vals * (k * r / z)
+    
+    # Compute jinc function. This is the main CPU-bound step.
+    # We use numpy for this and then transfer back to the device.
+    args_cpu = args.cpu().numpy()
+    # Use np.divide for safe division, handling the arg=0 case
+    jinc_vals_cpu = np.divide(scipy.special.jv(1, args_cpu), args_cpu, where=args_cpu!=0)
+    jinc_vals_cpu[args_cpu==0] = 0.5 # Manually set the limit for arg=0
+    jinc_vals = torch.from_numpy(jinc_vals_cpu).to(device)
+    
+    # Calculate phase and combine into complex values
+    psi = (torch.pi / (lam.cpu().numpy() * z)) * (x2.pow(2) - x1.pow(2))
+    vals_unnormalized = torch.exp(-1j * psi) * jinc_vals
+    
+    # Normalize and create final values for the sparse tensor
+    vals_normalized = vals_unnormalized / max_abs_val
+
+    # --- 5. Assemble Final Sparse Tensor ---
+    # Combine diagonal, upper, and lower band elements
+    diag_indices = torch.arange(N, device=device)
+    
+    # Indices for all non-zero elements
+    all_indices = torch.cat([
+        torch.stack([diag_indices, diag_indices]), # Diagonal
+        torch.stack([rows_upper, cols_upper]),     # Upper band
+        torch.stack([cols_upper, rows_upper])      # Lower band (Hermitian conjugate)
+    ], dim=1)
+    
+    # Values for all non-zero elements
+    all_values = torch.cat([
+        torch.ones(N, dtype=torch.complex64, device=device), # Diagonal values are 1
+        vals_normalized,                                     # Upper band values
+        vals_normalized.conj()                               # Lower band values
+    ])
+    
+    # Create and coalesce the sparse tensor
+    J_sparse = torch.sparse_coo_tensor(all_indices, all_values, (N, N))
+    return J_sparse.coalesce()
 
 def incoherent_source(sim_params: SimParams, rsrc: float, z: float, N: int, sparse_tol: float) -> torch.Tensor:
     modes = torch.zeros((sim_params.weights.shape[0], N, sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
