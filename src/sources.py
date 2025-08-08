@@ -153,7 +153,7 @@ def incoherent_source(sim_params: SimParams, rsrc: float, z: float, N: int, spar
         evals, evecs = matrix_free_eigsh(J, N)
         
         evals = evals / evals.max()
-        modes[i] = evecs
+        modes[i] = evecs.reshape(N, sim_params.Ny, sim_params.Nx)
         evals[i] = evals
 
     modes = modes.transpose(0, 1)

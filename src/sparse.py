@@ -107,7 +107,7 @@ def matrix_free_eigsh(
     evals_torch = torch.as_tensor(evals, device=device)
     evecs_torch = torch.as_tensor(evecs, device=device)
 
-    return evals_torch, evecs_torch
+    return evals_torch, evecs_torch.transpose(0, 1)
 
 
 def sparse_equal(a: torch.Tensor,
