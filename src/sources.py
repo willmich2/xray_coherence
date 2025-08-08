@@ -99,12 +99,18 @@ def circ_mutual_intensity_sparse(
     valid_mask = col_indices < N
     rows_upper = row_indices[valid_mask]
     cols_upper = col_indices[valid_mask]
+    
+    # Delete intermediate tensors that are no longer needed
+    del band_offsets, base_indices, row_indices, col_indices, valid_mask
 
     # Calculate distances and arguments for the Bessel function in a vectorized manner
     x1 = x[rows_upper]
     x2 = x[cols_upper]
     dx_vals = x2 - x1
     args = dx_vals * (k * r / z)
+    
+    # Delete intermediate tensors
+    del dx_vals
     
     # Compute jinc function. This is the main CPU-bound step.
     # We use numpy for this and then transfer back to the device.
@@ -114,12 +120,19 @@ def circ_mutual_intensity_sparse(
     jinc_vals_cpu[args_cpu==0] = 0.5 # Manually set the limit for arg=0
     jinc_vals = torch.from_numpy(jinc_vals_cpu).to(device)
     
+    # Delete CPU arrays that are no longer needed
+    del args_cpu, jinc_vals_cpu
+    
     # Calculate phase and combine into complex values
     psi = (torch.pi / (lam.cpu().numpy() * z)) * (x2.pow(2) - x1.pow(2))
     vals_unnormalized = torch.exp(-1j * psi) * jinc_vals
     
+    # Delete intermediate tensors
+    del psi, jinc_vals
+    
     # Normalize and create final values for the sparse tensor
     vals_normalized = vals_unnormalized / max_abs_val
+    del vals_unnormalized
 
     # --- 5. Assemble Final Sparse Tensor ---
     # Combine diagonal, upper, and lower band elements
@@ -132,6 +145,9 @@ def circ_mutual_intensity_sparse(
         torch.stack([cols_upper, rows_upper])      # Lower band (Hermitian conjugate)
     ], dim=1)
     
+    # Delete intermediate tensors
+    del diag_indices, rows_upper, cols_upper
+    
     # Values for all non-zero elements
     all_values = torch.cat([
         torch.ones(N, dtype=torch.complex64, device=device), # Diagonal values are 1
@@ -139,8 +155,15 @@ def circ_mutual_intensity_sparse(
         vals_normalized.conj()                               # Lower band values
     ])
     
+    # Delete normalized values after concatenation
+    del vals_normalized
+    
     # Create and coalesce the sparse tensor
     J_sparse = torch.sparse_coo_tensor(all_indices, all_values, (N, N))
+    
+    # Delete intermediate tensors before returning
+    del all_indices, all_values
+    
     return J_sparse.coalesce()
 
 def incoherent_source(sim_params: SimParams, rsrc: float, z: float, N: int, sparse_tol: float) -> torch.Tensor:
