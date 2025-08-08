@@ -143,13 +143,13 @@ def incoherent_source(sim_params: SimParams, rsrc: float, z: float, N: int, spar
     evals = torch.zeros((sim_params.weights.shape[0], N), dtype=sim_params.dtype, device=sim_params.device)
 
     for i, lam in enumerate(sim_params.lams):
-      J = circ_mutual_intensity_sparse(sim_params, lam, rsrc, z, sparse_tol)
-      
-      evals, evecs = matrix_free_eigsh(J, N)
-      
-      evals = evals / evals.max()
-      modes[i] = evecs
-      evals[i] = evals
+        J = circ_mutual_intensity_sparse(sim_params, lam, rsrc, z, sparse_tol)
+        
+        evals, evecs = matrix_free_eigsh(J, N)
+        
+        evals = evals / evals.max()
+        modes[i] = evecs
+        evals[i] = evals
 
     modes = modes.transpose(0, 1)
     evals = evals.transpose(0, 1)
