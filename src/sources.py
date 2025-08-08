@@ -84,7 +84,7 @@ def circ_mutual_intensity_sparse(
     arg_cutoff = scipy.optimize.brentq(func_to_solve, a, b, args=(abs_threshold,))
     
     dx_max = arg_cutoff * z / (k * r)
-    bandwidth = int(torch.ceil(dx_max.cpu().numpy() / dx_step.cpu().numpy()))
+    bandwidth = int(torch.ceil(dx_max / dx_step))
 
     # --- 4. Vectorized Construction of Off-Diagonal Elements ---
     # Generate all indices within the band at once
