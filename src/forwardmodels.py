@@ -56,33 +56,6 @@ def field_z_arbg_z(
 
     return Uzgz
 
-def forward_model_focus_plane_wave(
-    x: torch.Tensor, 
-    sim_params: SimParams,
-    opt_params: dict,
-    elem_params: dict,
-    Ncenter: int,
-    Navg: int,
-    z: float, 
-    ) -> float:
-    """
-    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
-    Then, calculate the visibility of the output field.
-    """
-    n = opt_params["n"]
-    x_opt = torch.repeat_interleave(x, n)
-    Uzgz = field_z_arbg_z(x_opt, sim_params, elem_params, z)
-
-    I_out = torch.sum(Uzgz.abs().pow(2) * sim_params.weights, dim=0).reshape(sim_params.Nx)
-    
-    I_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].mean()
-    I_out_edge = torch.cat((I_out[:Navg], I_out[-Navg:])).mean()
-    
-    visibility = (I_out_center - I_out_edge) / (I_out_center + I_out_edge)
-
-    obj = visibility
-
-    return obj
 
 def forward_model_focus_plane_wave_power(
     x: torch.Tensor, 
@@ -115,30 +88,6 @@ def forward_model_focus_plane_wave_power(
 
     return obj
 
-def forward_model_focus_plane_wave_overlap(
-    x: torch.Tensor, 
-    sim_params: SimParams,
-    opt_params: dict,
-    elem_params: dict,
-    r_focus: float,
-    z: float, 
-    ) -> float:
-    """
-    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
-    Then, calculate the power within a center region of the output field.
-    """
-    n = opt_params["n"]
-    x_opt = torch.repeat_interleave(x, n)
-    Uzgz = field_z_arbg_z(x_opt, sim_params, elem_params, z)
-
-    I_out = torch.sum(Uzgz.abs().pow(2) * sim_params.weights, dim=0).reshape(sim_params.Nx)
-
-    R = torch.sqrt(sim_params.X**2 + sim_params.Y**2)
-    I_focus = torch.exp(-R**2 / (2 * r_focus**2))
-
-    obj = torch.sum(I_out * I_focus) / torch.sum(I_focus) / torch.sum(I_out)
-
-    return obj
 
 def propagate_z_arbg_z_incoherent(
     x: torch.Tensor, 
@@ -204,29 +153,107 @@ def propagate_z_arbg_z_incoherent(
     return I_f.real
 
 
-def focus_incoherent_power(
+def forward_model_focus_point_source_power(
     x: torch.Tensor, 
     sim_params: SimParams,
     opt_params: dict,
     elem_params: dict,
     Ncenter: int,
     z: float, 
-    rsrc: float
+    input_modes: torch.Tensor, 
+    input_eigen_vals: torch.Tensor
     ) -> float:
     """
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
     Then, calculate the power within a center region of the output field.
     """
+    # Create doubled and repeated input tensor
     x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
+    # Delete intermediate tensors that are no longer needed
+    del x_dbl
 
-    I_out = propagate_z_arbg_z_incoherent(x_opt, sim_params, elem_params, z, rsrc)
+    Nmodes = input_modes.shape[0]
+    output_modes = torch.zeros((Nmodes, sim_params.weights.shape[0], sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
 
+    for i in range(Nmodes):
+        Uzgz = field_z_arbg_z(input_modes[i], sim_params, elem_params, z)
+        output_modes[i] = Uzgz
+        # Delete the temporary field tensor after copying to output_modes
+        del Uzgz
+
+    # Transpose output_modes and delete the original
+    output_modes = output_modes.transpose(0, 1)
+
+    # Calculate intensity array and delete output_modes
+    I_arr = torch.sum(output_modes.abs().pow(2) * input_eigen_vals, dim=1)
+    del output_modes
+
+    # Calculate final intensity and delete intermediate tensors
+    I_out = torch.sum(I_arr * sim_params.weights, dim=0).reshape(sim_params.Nx)
+    del I_arr
+
+    # Calculate power in center region
     P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
-
+    del I_out
+    
     obj = P_out_center
 
     return obj
 
 
+## these are old functions that are not used anymore (maybe delete)
+
+def forward_model_focus_plane_wave_overlap(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    opt_params: dict,
+    elem_params: dict,
+    r_focus: float,
+    z: float, 
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the power within a center region of the output field.
+    """
+    n = opt_params["n"]
+    x_opt = torch.repeat_interleave(x, n)
+    Uzgz = field_z_arbg_z(x_opt, sim_params, elem_params, z)
+
+    I_out = torch.sum(Uzgz.abs().pow(2) * sim_params.weights, dim=0).reshape(sim_params.Nx)
+
+    R = torch.sqrt(sim_params.X**2 + sim_params.Y**2)
+    I_focus = torch.exp(-R**2 / (2 * r_focus**2))
+
+    obj = torch.sum(I_out * I_focus) / torch.sum(I_focus) / torch.sum(I_out)
+
+    return obj
+
+def forward_model_focus_plane_wave(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    opt_params: dict,
+    elem_params: dict,
+    Ncenter: int,
+    Navg: int,
+    z: float, 
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the visibility of the output field.
+    """
+    n = opt_params["n"]
+    x_opt = torch.repeat_interleave(x, n)
+    Uzgz = field_z_arbg_z(x_opt, sim_params, elem_params, z)
+
+    I_out = torch.sum(Uzgz.abs().pow(2) * sim_params.weights, dim=0).reshape(sim_params.Nx)
+    
+    I_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].mean()
+    I_out_edge = torch.cat((I_out[:Navg], I_out[-Navg:])).mean()
+    
+    visibility = (I_out_center - I_out_edge) / (I_out_center + I_out_edge)
+
+    obj = visibility
+
+    return obj
