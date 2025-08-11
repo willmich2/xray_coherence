@@ -59,6 +59,9 @@ def circ_mutual_intensity_sparse(
     # --- 2. Determine Normalization Factor and Sparsity Threshold ---
     bandwidth = int((z / (k_wave * r * sparse_tol)) / dx_step)
 
+    if bandwidth > N - 1:
+      bandwidth = N - 1
+
     arg_at_min_dx = (dx_step * k_wave * r / z).cpu().numpy()  
     
     max_abs_val = np.abs(scipy.special.jv(1, arg_at_min_dx) / arg_at_min_dx)
