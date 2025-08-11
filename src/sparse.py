@@ -104,7 +104,7 @@ def matrix_free_eigsh(
     evals, evecs = linalg.eigsh(lop, k, which='LA', tol=1e-4)
 
     # 4. Convert final results to PyTorch tensors
-    evals_torch = torch.as_tensor(evals, device=device)
+    evals_torch = torch.as_tensor(evals, device=device).real
     evecs_torch = torch.as_tensor(evecs, device=device)
 
     return evals_torch, evecs_torch.transpose(0, 1)
