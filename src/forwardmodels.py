@@ -221,7 +221,7 @@ def forward_model_focus_point_source_power(
     del output_modes
 
     # Calculate final intensity and delete intermediate tensors
-    I_out = torch.sum(I_arr * sim_params.weights, dim=0).reshape(sim_params.Nx)
+    I_out = torch.sum(I_arr * sim_params.weights.unsqueeze(-1).unsqueeze(-1), dim=0).reshape(sim_params.Nx)
     del I_arr
 
     # Calculate power in center region
