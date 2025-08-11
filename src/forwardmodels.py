@@ -214,6 +214,7 @@ def forward_model_focus_point_source_power(
 
     # Transpose output_modes and delete the original
     output_modes = output_modes.transpose(0, 1)
+    input_eigen_vals = input_eigen_vals.transpose(0, 1)
 
     # Calculate intensity array and delete output_modes
     I_arr = torch.sum(output_modes.abs().pow(2)*(input_eigen_vals.unsqueeze(-1).unsqueeze(-1)), dim=1)
