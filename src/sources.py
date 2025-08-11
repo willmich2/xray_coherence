@@ -53,33 +53,11 @@ def circ_mutual_intensity_sparse(
     if not torch.all(x[1:] >= x[:-1]):
         raise ValueError("Input tensor sim_params.x must be sorted.")
 
-    dx_step = x[1] - x[0]  # Assuming uniform spacing
+    dx_step = sim_params.dx
     k_wave = 2 * torch.pi / lam
 
     # --- 2. Determine Normalization Factor and Sparsity Threshold ---
-    arg_at_min_dx = (dx_step * k_wave * r / z).cpu().numpy()
-    
-    if arg_at_min_dx < 1e-6:
-        max_abs_val = 0.5
-    else:
-        max_abs_val = np.abs(scipy.special.jv(1, arg_at_min_dx) / arg_at_min_dx)
-    
-    abs_threshold = sparse_tol * max_abs_val
-
-    # --- 3. Calculate Bandwidth of Significant Elements ---
-    def func_to_solve(arg, target):
-        value = np.abs(scipy.special.jv(1, arg) / arg) if arg > 1e-9 else 0.5
-        return value - target
-
-    a = arg_at_min_dx
-    b = a + 1.0 
-    while func_to_solve(b, abs_threshold) > 0:
-        b *= 2.0
-
-    arg_cutoff = scipy.optimize.brentq(func_to_solve, a, b, args=(abs_threshold,))
-    
-    dx_max = arg_cutoff * z / (k_wave * r)
-    bandwidth = int(torch.ceil(dx_max / dx_step).item())
+    bandwidth = int((z / (k_wave * r * sparse_tol)) / dx_step)
 
     # --- 4. Pre-allocate Tensors for Sparse Matrix Construction ---
     # Calculate the exact number of non-zero elements
@@ -153,7 +131,7 @@ def incoherent_source(sim_params: SimParams, rsrc: float, z: float, N: int, spar
         evals = evals / evals.max()
         modes[i] = evecs.reshape(N, sim_params.Ny, sim_params.Nx)
         evals_tensor[i] = evals
-        print(f"finished lam {i} of {sim_params.lams.shape[0]}")
+        print(f"finished lam {i + 1} of {sim_params.lams.shape[0]}")
 
     modes = modes.transpose(0, 1)
     evals_tensor = evals_tensor.transpose(0, 1)
