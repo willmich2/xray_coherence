@@ -59,6 +59,10 @@ def circ_mutual_intensity_sparse(
     # --- 2. Determine Normalization Factor and Sparsity Threshold ---
     bandwidth = int((z / (k_wave * r * sparse_tol)) / dx_step)
 
+    arg_at_min_dx = (dx_step * k_wave * r / z).cpu().numpy()  
+    
+    max_abs_val = np.abs(scipy.special.jv(1, arg_at_min_dx) / arg_at_min_dx)
+
     # --- 4. Pre-allocate Tensors for Sparse Matrix Construction ---
     # Calculate the exact number of non-zero elements
     nnz = N + 2 * (bandwidth * N - bandwidth * (bandwidth + 1) // 2)
