@@ -124,21 +124,25 @@ def x_I_opt(
             elem_params = elem_params, 
             z = args[-1]
             )
+
+        weights_t = sim_params.weights.view(-1, 1, 1)
+        I_opt = torch.sum((U_opt.abs()**2) * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
     else:
-        U_opt = field_z_arbg_z_mode(
-            x = opt_x_full, 
-            mode = opt_x_proj, 
-            sim_params = sim_params, 
-            elem_params = elem_params, 
-            z = args[2]
-            )
-    
+        input_modes = args[-2]
+        input_eigen_vals = args[-1]
+        Nmodes = input_modes.shape[0]
+        output_modes = torch.zeros((Nmodes, sim_params.weights.shape[0], sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
+
+        for i in range(Nmodes):
+            Uzgz = field_z_arbg_z_mode(opt_x_full, input_modes[i], sim_params, elem_params, args[2])
+            output_modes[i] = Uzgz
+        
+        I_arr = torch.sum(output_modes.abs().pow(2)*(input_eigen_vals.unsqueeze(-1).unsqueeze(-1)), dim=1)
+        I_opt = torch.sum(I_arr * sim_params.weights.unsqueeze(-1).unsqueeze(-1), dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
+        del output_modes
+        del I_arr
+        
     opt_x = opt_x_proj.detach().cpu().numpy()
     opt_x_full = opt_x_full.detach().cpu().numpy()
-    
-    weights_t = sim_params.weights.view(-1, 1, 1)
-    
-    # Calculate weighted sum of intensities
-    I_opt = torch.sum((U_opt.abs()**2) * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
-        
+            
     return opt_x, opt_x_full, I_opt, final_obj
