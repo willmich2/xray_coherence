@@ -143,7 +143,7 @@ def circ_mutual_intensity_sparse(
 
 def incoherent_source(sim_params: SimParams, rsrc: float, z: float, N: int, sparse_tol: float) -> torch.Tensor:
     modes = torch.zeros((sim_params.weights.shape[0], N, sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
-    evals_tensor = torch.zeros((sim_params.weights.shape[0], N), dtype=sim_params.dtype, device=sim_params.device)
+    evals_tensor = torch.zeros((sim_params.weights.shape[0], N), dtype=torch.float32, device=sim_params.device)
 
     for i, lam in enumerate(sim_params.lams):
         J = circ_mutual_intensity_sparse(sim_params, lam, rsrc, z, sparse_tol)
