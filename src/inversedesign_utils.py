@@ -16,24 +16,41 @@ def create_objective_function(
         x:    current guess (NumPy array)
         grad: array for gradient output
         """
-        zero = torch.zeros(0, dtype=sim_params.dtype, device=sim_params.device)
-        # Convert to PyTorch tensor
-        g = torch.tensor(x, dtype=zero.real.dtype, requires_grad=True)
+        try:
+            zero = torch.zeros(0, dtype=sim_params.dtype, device=sim_params.device)
+            # Convert to PyTorch tensor
+            g = torch.tensor(x, dtype=zero.real.dtype, requires_grad=True)
 
-        # Apply smooth threshold
-        g_thresholded = heaviside_projection(g, beta=beta)
+            # Apply smooth threshold
+            g_thresholded = heaviside_projection(g, beta=beta)
 
-        # Evaluate forward model
-        obj = forward_model(g_thresholded, sim_params, opt_params, *forward_model_args)
+            # Evaluate forward model
+            obj = forward_model(g_thresholded, sim_params, opt_params, *forward_model_args)
 
-        # If NLopt wants gradients:
-        if grad.size > 0:
-            # Backprop in PyTorch
-            obj.backward()
-            # Copy gradients back to NLopt array
-            grad[:] = g.grad.detach().numpy()
+            # Check for invalid values
+            if torch.isnan(obj) or torch.isinf(obj):
+                print(f"Warning: Objective function returned {obj.item()}")
+                return 0.0  # Return a safe default value
 
-        return obj.item()
+            # If NLopt wants gradients:
+            if grad.size > 0:
+                # Backprop in PyTorch
+                obj.backward()
+                # Copy gradients back to NLopt array
+                grad[:] = g.grad.detach().numpy()
+                
+                # Check for invalid gradients
+                if np.any(np.isnan(grad)) or np.any(np.isinf(grad)):
+                    print(f"Warning: Gradients contain invalid values")
+                    grad[:] = 0.0  # Set gradients to zero
+
+            return obj.item()
+        except Exception as e:
+            print(f"Error in objective function: {e}")
+            # Return a safe default value
+            if grad.size > 0:
+                grad[:] = 0.0
+            return 0.0
     return objective_function
 
 
