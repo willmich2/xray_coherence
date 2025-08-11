@@ -57,6 +57,34 @@ def field_z_arbg_z(
     return Uzgz
 
 
+def field_z_arbg_z_mode(
+    x: torch.Tensor,
+    mode: torch.Tensor,
+    sim_params: SimParams,
+    elem_params: dict,
+    z: float, 
+    ) -> torch.Tensor:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    """
+    element = ArbitraryElement(
+        name="ArbitraryElement", 
+        thickness=elem_params["thickness"], 
+        elem_map=elem_params["elem_map"], 
+        gap_map=elem_params["gap_map"], 
+        x=x
+    )
+
+    Uzgz = propagate_z_arbg_z(
+        U = mode, 
+        z = z, 
+        sim_params = sim_params, 
+        element = element
+        )
+
+    return Uzgz
+
+
 def forward_model_focus_plane_wave_power(
     x: torch.Tensor, 
     sim_params: SimParams,
@@ -178,7 +206,7 @@ def forward_model_focus_point_source_power(
     output_modes = torch.zeros((Nmodes, sim_params.weights.shape[0], sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
 
     for i in range(Nmodes):
-        Uzgz = field_z_arbg_z(input_modes[i], sim_params, elem_params, z)
+        Uzgz = field_z_arbg_z_mode(x_opt, input_modes[i], sim_params, elem_params, z)
         output_modes[i] = Uzgz
         # Delete the temporary field tensor after copying to output_modes
         del Uzgz
