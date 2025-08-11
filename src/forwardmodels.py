@@ -199,6 +199,7 @@ def forward_model_focus_point_source_power(
     x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
+    x_opt = x_opt.reshape(1, x_opt.shape[0])
     # Delete intermediate tensors that are no longer needed
     del x_dbl
 
