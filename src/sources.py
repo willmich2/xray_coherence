@@ -153,6 +153,7 @@ def incoherent_source(sim_params: SimParams, rsrc: float, z: float, N: int, spar
         evals = evals / evals.max()
         modes[i] = evecs.reshape(N, sim_params.Ny, sim_params.Nx)
         evals_tensor[i] = evals
+        print(f"finished lam {i} of {sim_params.lams.shape[0]}")
 
     modes = modes.transpose(0, 1)
     evals_tensor = evals_tensor.transpose(0, 1)
