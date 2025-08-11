@@ -136,6 +136,9 @@ def x_I_opt(
         for i in range(Nmodes):
             Uzgz = field_z_arbg_z_mode(opt_x_full, input_modes[i], sim_params, elem_params, args[2])
             output_modes[i] = Uzgz
+
+        output_modes = output_modes.transpose(0, 1)
+        input_eigen_vals = input_eigen_vals.transpose(0, 1)
         
         I_arr = torch.sum(output_modes.abs().pow(2)*(input_eigen_vals.unsqueeze(-1).unsqueeze(-1)), dim=1)
         I_opt = torch.sum(I_arr * sim_params.weights.unsqueeze(-1).unsqueeze(-1), dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
