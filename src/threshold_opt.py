@@ -130,7 +130,7 @@ def x_I_opt(
             mode = opt_x_proj, 
             sim_params = sim_params, 
             elem_params = elem_params, 
-            z = args[-1]
+            z = args[2]
             )
     
     opt_x = opt_x_proj.detach().cpu().numpy()
