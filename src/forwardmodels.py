@@ -195,19 +195,6 @@ def forward_model_focus_point_source_power(
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
     Then, calculate the power within a center region of the output field.
     """
-    # Input validation
-    if torch.isnan(x).any() or torch.isinf(x).any():
-        print("Warning: Input tensor x contains NaN or infinite values")
-        return 0.0
-    
-    if Ncenter <= 0 or Ncenter > sim_params.Nx:
-        print(f"Warning: Invalid Ncenter={Ncenter}, must be between 1 and {sim_params.Nx}")
-        return 0.0
-    
-    if z <= 0:
-        print(f"Warning: Invalid z={z}, must be positive")
-        return 0.0
-    
     # Create doubled and repeated input tensor
     x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
@@ -237,31 +224,13 @@ def forward_model_focus_point_source_power(
     I_out = torch.sum(I_arr * sim_params.weights.unsqueeze(-1).unsqueeze(-1), dim=0).reshape(sim_params.Nx)
     del I_arr
 
-    # Check for invalid values in I_out
-    if torch.isnan(I_out).any() or torch.isinf(I_out).any():
-        print("Warning: I_out contains NaN or infinite values")
-        return 0.0
-
     # Calculate power in center region
-    center_start = I_out.shape[0]//2 - Ncenter//2
-    center_end = I_out.shape[0]//2 + Ncenter//2
-    
-    # Ensure valid indexing
-    if center_start < 0 or center_end > I_out.shape[0]:
-        print(f"Warning: Invalid center region indices: {center_start}:{center_end} for array of size {I_out.shape[0]}")
-        return 0.0
-    
-    P_out_center = I_out[center_start:center_end].sum()
+    P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
     del I_out
-    
-    # Final validation
-    if torch.isnan(P_out_center) or torch.isinf(P_out_center):
-        print(f"Warning: P_out_center is {P_out_center}")
-        return 0.0
     
     obj = P_out_center
 
-    return obj
+    return obj.real
 
 
 ## these are old functions that are not used anymore (maybe delete)
