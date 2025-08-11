@@ -4,7 +4,7 @@ import nlopt # type: ignore
 from typing import Callable
 from src.inversedesign_utils import create_objective_function, heaviside_projection
 from src.simparams import SimParams
-from src.forwardmodels import field_z_arbg_z
+from src.forwardmodels import field_z_arbg_z, field_z_arbg_z_mode, forward_model_focus_plane_wave_power
 
 def threshold_opt(
     sim_params: SimParams, 
@@ -115,13 +115,23 @@ def x_I_opt(
     pad_left = (sim_params.Nx - opt_x_full.shape[1]) // 2
     pad_right = sim_params.Nx - opt_x_full.shape[1] - pad_left
     opt_x_full = torch.nn.functional.pad(opt_x_full, (pad_left, pad_right, 0, 0))
+
+    if fwd_model == forward_model_focus_plane_wave_power:
     
-    U_opt = field_z_arbg_z(
-        x = opt_x_full, 
-        sim_params = sim_params, 
-        elem_params = elem_params, 
-        z = args[-1]
-        )
+        U_opt = field_z_arbg_z(
+            x = opt_x_full, 
+            sim_params = sim_params, 
+            elem_params = elem_params, 
+            z = args[-1]
+            )
+    else:
+        U_opt = field_z_arbg_z_mode(
+            x = opt_x_full, 
+            mode = opt_x_proj, 
+            sim_params = sim_params, 
+            elem_params = elem_params, 
+            z = args[-1]
+            )
     
     opt_x = opt_x_proj.detach().cpu().numpy()
     opt_x_full = opt_x_full.detach().cpu().numpy()
