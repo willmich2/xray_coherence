@@ -236,6 +236,8 @@ def propagate_z(
             sim_params.dx,
             sim_params.device
         )
+    else:
+        raise ValueError(f"Invalid propagation method: {method}")
     return Uz
 
 
