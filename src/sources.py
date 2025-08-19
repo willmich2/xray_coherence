@@ -12,6 +12,9 @@ def gaussian_source(sim_params: SimParams, rsrc: float) -> torch.Tensor:
     R_sq = sim_params.X**2 + sim_params.Y**2
     U_init = torch.exp(-R_sq / (2 * rsrc**2)) * torch.exp(1j * 2*torch.pi * torch.rand(U_init.shape, dtype=sim_params.dtype, device=sim_params.device))
 
+    #zero out values below a certain threshold
+    U_init[U_init.abs() < 1e-6] = 0
+
     return U_init
 
 def plane_wave(sim_params: SimParams) -> torch.Tensor:
