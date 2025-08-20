@@ -1,12 +1,34 @@
 import torch # type: ignore
 from src.propagation import propagate_z, angular_spectrum_propagation
 from src.sources import plane_wave, gaussian_source
-from src.elements import ArbitraryElement
+from src.elements import ArbitraryElement, RectangularAperture
 from src.simparams import SimParams
 
 # TODO: 
 # - [] probably get rid of mc_propagate since we are modeling incoherence with the OTF
 # - [] add a function to calculate the OTF
+
+
+def propagate_z_aperture_z(
+    U: torch.Tensor, 
+    z: float, 
+    sim_params: SimParams, 
+    aperture: RectangularAperture
+    ) -> torch.Tensor:
+    """
+    Propagate a plane wave a distance z, apply an aperture, and propagate a distance z again.
+    """
+    Uz = propagate_z(U, z, sim_params)
+    del U
+
+    Uzg = aperture.apply_element(Uz, sim_params)
+    del Uz
+
+    Uzgz = propagate_z(Uzg, z, sim_params)
+    del Uzg
+    del aperture
+
+    return Uzgz
 
 
 def propagate_z_arbg_z(
