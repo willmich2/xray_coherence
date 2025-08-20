@@ -237,3 +237,21 @@ class RectangularElement:
         k0 = 2 * torch.acos(torch.tensor(-1.0, dtype=zero.real.dtype, device=params.device)) / lam 
         
         return torch.exp(1j * k0 * n_eff)
+
+@dataclass 
+class RectangularAperture:
+    name: str
+    length: float # in x direction
+    width: float # in y direction
+
+    def __str__(self):
+            return f"RectangularAperture(name={self.name}, length={self.length}, width={self.width})"
+
+    def transmission(self, lam: float, params: SimParams):
+        transmission = torch.ones(params.Nx, params.Ny, dtype=params.dtype, device=params.device)
+        transmission = torch.where(torch.abs(params.X) > self.length/2, 0, transmission)
+        transmission = torch.where(torch.abs(params.Y) > self.width/2, 0, transmission)
+        return transmission
+
+    def apply_element(self, U: torch.Tensor, sim_params: SimParams):
+        return U * self.transmission(sim_params.lams[0], sim_params)
