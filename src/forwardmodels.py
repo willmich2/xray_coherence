@@ -13,7 +13,8 @@ def propagate_z_aperture_z(
     U: torch.Tensor, 
     z: float, 
     sim_params: SimParams, 
-    aperture: RectangularAperture
+    aperture: RectangularAperture, 
+    z2: float
     ) -> torch.Tensor:
     """
     Propagate a plane wave a distance z, apply an aperture, and propagate a distance z again.
@@ -24,7 +25,7 @@ def propagate_z_aperture_z(
     Uzg = aperture.apply_element(Uz, sim_params)
     del Uz
 
-    Uzgz = propagate_z(Uzg, z, sim_params)
+    Uzgz = propagate_z(Uzg, z2, sim_params)
     del Uzg
     del aperture
 
