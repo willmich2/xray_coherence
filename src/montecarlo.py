@@ -49,7 +49,7 @@ def mc_propagate_accumulate_intensity(
 
             u_init = u_init_func(sim_params_wvl, *u_init_func_args)
             assert u_init.shape[0] == 1, "u_init must be a single wavelength"
-            u_final = prop_func(u_init, z, sim_params_wvl, *prop_func_args)
+            u_final = prop_func(u_init, z, sim_params_wvl, *prop_func_args).reshape(sim_params.Ny, sim_params.Nx)
 
             i_i += torch.abs(u_final)**2 * sim_params.weights[wvl]
 
