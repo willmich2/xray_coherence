@@ -45,6 +45,7 @@ def mc_propagate_accumulate_intensity(
         for wvl in range(sim_params.weights.shape[0]):
             sim_params_wvl = sim_params.copy()
             sim_params_wvl.lams = sim_params.lams[wvl]
+            sim_params_wvl.weights = sim_params.weights[wvl]
 
             u_init = u_init_func(sim_params_wvl, *u_init_func_args)
             assert u_init.shape[0] == 1, "u_init must be a single wavelength"
