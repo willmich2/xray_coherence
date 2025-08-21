@@ -44,8 +44,8 @@ def mc_propagate_accumulate_intensity(
         i_i = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
         for wvl in range(sim_params.weights.shape[0]):
             sim_params_wvl = sim_params.copy()
-            sim_params_wvl.lams = sim_params.lams[wvl]
-            sim_params_wvl.weights = sim_params.weights[wvl]
+            sim_params_wvl.lams = torch.tensor(sim_params.lams[wvl], dtype=sim_params.dtype, device=sim_params.device)
+            sim_params_wvl.weights = torch.tensor(sim_params.weights[wvl], dtype=sim_params.dtype, device=sim_params.device)
 
             u_init = u_init_func(sim_params_wvl, *u_init_func_args)
             assert u_init.shape[0] == 1, "u_init must be a single wavelength"
