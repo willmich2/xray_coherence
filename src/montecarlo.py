@@ -38,12 +38,17 @@ def mc_propagate_accumulate_intensity(
     Repeatedly propagate an initial field given by u_init_func through a propagation function prop_func.
     Returns a tensor of shape (Nwvl, Ny, Nx) where n is the number of Monte Carlo samples.
     """
-    i_final = torch.zeros((sim_params.weights.shape[0], sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
+    i_final = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
 
     for i in range(n):
-        u_init = u_init_func(sim_params, *u_init_func_args)
-        u_final = prop_func(u_init, z, sim_params, *prop_func_args)
-        i_final += torch.abs(u_final)**2
+        i_i = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
+        for wvl in range(sim_params.weights.shape[0]):
+            sim_params.lams = sim_params.lams[wvl]
+            u_init = u_init_func(sim_params, *u_init_func_args)
+            u_final = prop_func(u_init, z, sim_params, *prop_func_args)
+            i_i += torch.abs(u_final)**2 * sim_params.weights[wvl]
+
+        i_final += i_i
 
     i_final /= n
     
