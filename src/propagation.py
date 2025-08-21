@@ -29,19 +29,19 @@ def angular_spectrum_propagation(
     batch_size, Ny_padded, Nx_padded = U_padded.shape
 
     # --- Setup constants and coordinates ---
-    pi = torch.acos(torch.tensor(-1.0, dtype=torch.float32, device=device))
+    pi = torch.acos(torch.tensor(-1.0, dtype=torch.complex64, device=device))
 
     # Reshape wavelengths to (batch, 1, 1) for broadcasting.
     # Using reshape() is more robust and avoids the TypeError.
-    lam_reshaped = lam.reshape(batch_size, 1, 1).to(torch.float32)
+    lam_reshaped = lam.reshape(batch_size, 1, 1).to(torch.complex64)
     
     # Calculate wave number k0 for each wavelength in the batch.
     # Shape: (batch, 1, 1)
     k0 = 2 * pi / lam_reshaped
 
     # Create spatial frequency coordinates (these are the same for all items in batch).
-    kx = torch.fft.fftfreq(Nx_padded, dx, dtype=torch.float32, device=device) * 2 * pi
-    ky = torch.fft.fftfreq(Ny_padded, dx, dtype=torch.float32, device=device) * 2 * pi
+    kx = torch.fft.fftfreq(Nx_padded, dx, dtype=torch.complex64, device=device) * 2 * pi
+    ky = torch.fft.fftfreq(Ny_padded, dx, dtype=torch.complex64, device=device) * 2 * pi
     KY, KX = torch.meshgrid(ky, kx, indexing='ij')
 
     # --- Construct the Transfer Function ---
