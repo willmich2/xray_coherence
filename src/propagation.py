@@ -50,8 +50,6 @@ def angular_spectrum_propagation(
     else:
         kx_max = torch.abs(2 * pi / lam_reshaped.reshape(-1).item() * np.sin(theta_max))
         ky_max = torch.abs(2 * pi / lam_reshaped.reshape(-1).item() * np.sin(theta_max))
-        kx = kx * (torch.abs(kx) <= kx_max)
-        ky = ky * (torch.abs(ky) <= ky_max)
 
     KY, KX = torch.meshgrid(ky, kx, indexing='ij')
 
@@ -71,6 +69,10 @@ def angular_spectrum_propagation(
     # The transfer function is now a batch of functions, one for each wavelength.
     # Shape: (batch, Ny_padded, Nx_padded)
     transfer_function = torch.exp(1j * z * kz)
+    if U_padded.shape[0] != 1:
+        transfer_function = transfer_function
+    else:
+        transfer_function = transfer_function * (torch.abs(kx) <= kx_max) * (torch.abs(ky) <= ky_max)
     del kz
     # --- Apply Propagation in Fourier Domain ---
     # torch.fft.fft2 and ifft2 operate on the last two dimensions by default,
