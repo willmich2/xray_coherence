@@ -215,7 +215,8 @@ def propagate_z(
     U: torch.Tensor,
     z: float,
     sim_params: SimParams, 
-    method: str = "angular"
+    method: str = "angular",
+    theta_max: float = np.pi/2
 ) -> torch.Tensor:
     """
     Propagates a multi-wavelength field U over a distance z.
@@ -238,7 +239,8 @@ def propagate_z(
             sim_params.lams,
             z,
             sim_params.dx,
-            sim_params.device
+            sim_params.device, 
+            theta_max=theta_max
         )
     elif method == "direct":
         Uz = direct_integration_propagation(

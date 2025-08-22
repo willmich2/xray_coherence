@@ -20,13 +20,13 @@ def propagate_z_aperture_z(
     """
     Propagate a field a distance z, apply an aperture, and propagate a distance z again.
     """
-    Uz = propagate_z(U, z, sim_params)
+    Uz = propagate_z(U, z, sim_params, theta_max=theta_max)
     del U
 
     Uzg = aperture.apply_element(Uz, sim_params)
     del Uz
 
-    Uzgz = propagate_z(Uzg, z2, sim_params)
+    Uzgz = propagate_z(Uzg, z2, sim_params, theta_max=theta_max)
     del Uzg
     del aperture
 
