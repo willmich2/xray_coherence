@@ -14,10 +14,11 @@ def propagate_z_aperture_z(
     z: float, 
     sim_params: SimParams, 
     aperture: RectangularAperture, 
-    z2: float
+    z2: float, 
+    theta_max: float
     ) -> torch.Tensor:
     """
-    Propagate a plane wave a distance z, apply an aperture, and propagate a distance z again.
+    Propagate a field a distance z, apply an aperture, and propagate a distance z again.
     """
     Uz = propagate_z(U, z, sim_params)
     del U

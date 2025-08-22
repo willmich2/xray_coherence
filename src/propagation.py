@@ -1,3 +1,4 @@
+import numpy as np # type: ignore
 import torch # type: ignore
 import torch.nn.functional as F # type: ignore
 from src.simparams import SimParams
@@ -7,7 +8,8 @@ def angular_spectrum_propagation(
     lam: torch.Tensor,
     z: float,
     dx: float,
-    device: torch.device
+    device: torch.device,
+    theta_max: float = np.pi/2
 ) -> torch.Tensor:
     """
     Performs angular spectrum propagation for a batch of fields.
@@ -39,9 +41,18 @@ def angular_spectrum_propagation(
     # Shape: (batch, 1, 1)
     k0 = 2 * pi / lam_reshaped
 
-    # Create spatial frequency coordinates (these are the same for all items in batch).
     kx = torch.fft.fftfreq(Nx_padded, dx, dtype=torch.float32, device=device) * 2 * pi
     ky = torch.fft.fftfreq(Ny_padded, dx, dtype=torch.float32, device=device) * 2 * pi
+
+    if U_padded.shape[0] != 1:
+        # do not impose a theta_max for multiple wavelengths
+        theta_max = np.pi/2
+    else:
+        kx_max = torch.abs(2 * pi / lam_reshaped.reshape(-1).item() * np.sin(theta_max))
+        ky_max = torch.abs(2 * pi / lam_reshaped.reshape(-1).item() * np.sin(theta_max))
+        kx = kx * (torch.abs(kx) <= kx_max)
+        ky = ky * (torch.abs(ky) <= ky_max)
+
     KY, KX = torch.meshgrid(ky, kx, indexing='ij')
 
     # --- Construct the Transfer Function ---
@@ -144,7 +155,7 @@ def direct_integration_propagation(
     # --- Prepare Constants for Batched Operation ---
     # Reshape lam and calculate k for broadcasting across the spatial grid.
     # Shapes will be (batch, 1, 1).
-    lam_reshaped = lam.view(batch_size, 1, 1).to(torch.float32)
+    lam_reshaped = lam.view(batch_size, 1, 1)
     k = 2 * pi / lam_reshaped
 
     # The area of each source element for the integral.
