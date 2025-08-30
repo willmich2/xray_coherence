@@ -3,6 +3,7 @@ from src.propagation import propagate_z, angular_spectrum_propagation
 from src.sources import plane_wave, gaussian_source
 from src.elements import ArbitraryElement, RectangularAperture
 from src.simparams import SimParams
+from src.montecarlo import mc_propagate_accumulate_intensity
 
 # TODO: 
 # - [] probably get rid of mc_propagate since we are modeling incoherence with the OTF
@@ -54,6 +55,30 @@ def propagate_z_arbg_z(
 
     return Uzgz
 
+
+def propagate_z1_arbg_z2(
+    U: torch.Tensor, 
+    z1: float, 
+    sim_params: SimParams, 
+    z2: float, 
+    element: ArbitraryElement
+    ) -> torch.Tensor:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    """
+    Uz = propagate_z(U, z1, sim_params)
+    del U
+
+    Uzg = element.apply_element(Uz, sim_params)
+    del Uz
+
+    Uzgz = propagate_z(Uzg, z2, sim_params)
+    del Uzg
+    del element
+
+    return Uzgz
+
+
 def field_z_arbg_z(
     x: torch.Tensor,
     sim_params: SimParams,
@@ -79,7 +104,6 @@ def field_z_arbg_z(
         )
 
     return Uzgz
-
 
 def field_z_arbg_z_mode(
     x: torch.Tensor,
@@ -139,6 +163,59 @@ def forward_model_focus_plane_wave_power(
     obj = P_out_center
 
     return obj
+
+
+def forward_model_focus_incoherent_mc_power(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    opt_params: dict,
+    elem_params: dict,
+    Ncenter: int,
+    z1: float, 
+    z2: float, 
+    rsrc: float, 
+    nmc: int
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the power within a center region of the output field.
+    """
+    # concatenate x and a backwards version of x
+    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    n = opt_params["n"]
+    x_opt = torch.repeat_interleave(x_dbl, n)
+    x_opt = x_opt.reshape(1, x_opt.shape[0])
+
+    element = ArbitraryElement(
+        name="ArbitraryElement", 
+        thickness=elem_params["thickness"], 
+        elem_map=elem_params["elem_map"], 
+        gap_map=elem_params["gap_map"], 
+        x=x
+    )
+
+    I_mc = mc_propagate_accumulate_intensity(
+        u_init_func=gaussian_source,
+        u_init_func_args=(rsrc,),
+        prop_func=propagate_z1_arbg_z2,
+        prop_func_args=(element, z2),
+        n=nmc,
+        z=z1,
+        sim_params=sim_params
+    )
+
+    # calculated intensity by summing over wavelengths, weighted by weights
+    weights_t = sim_params.weights.view(-1, 1, 1)
+    I_out = torch.sum(I_mc * weights_t, dim=0).reshape(sim_params.Nx)
+    del I_mc
+    
+    P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
+
+    obj = P_out_center
+
+    return obj
+
+
 
 
 def propagate_z_arbg_z_incoherent(
