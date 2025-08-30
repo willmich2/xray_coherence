@@ -191,7 +191,7 @@ def forward_model_focus_incoherent_mc_power(
         thickness=elem_params["thickness"], 
         elem_map=elem_params["elem_map"], 
         gap_map=elem_params["gap_map"], 
-        x=x
+        x=x_opt
     )
 
     I_mc = mc_propagate_accumulate_intensity(
