@@ -4,7 +4,10 @@ import nlopt # type: ignore
 from typing import Callable
 from src.inversedesign_utils import create_objective_function, heaviside_projection
 from src.simparams import SimParams
-from src.forwardmodels import field_z_arbg_z, field_z_arbg_z_mode, forward_model_focus_plane_wave_power, forward_model_focus_incoherent_mc_power
+from src.forwardmodels import field_z_arbg_z, field_z_arbg_z_mode, forward_model_focus_plane_wave_power, forward_model_focus_incoherent_mc_power, propagate_z1_arbg_z2
+from src.elements import ArbitraryElement
+from src.sources import gaussian_source
+from src.montecarlo import mc_propagate_accumulate_intensity
 
 def threshold_opt(
     sim_params: SimParams, 
@@ -128,19 +131,25 @@ def x_I_opt(
         weights_t = sim_params.weights.view(-1, 1, 1)
         I_opt = torch.sum((U_opt.abs()**2) * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
     elif fwd_model == forward_model_focus_incoherent_mc_power:
-        I_opt = forward_model_focus_incoherent_mc_power(
-            x = opt_x_full, 
-            sim_params = sim_params, 
-            opt_params = opt_params, 
-            elem_params = elem_params, 
-            Ncenter = args[-2], 
-            z1 = args[-3], 
-            z2 = args[-1], 
-            rsrc = args[-4], 
-            nmc = args[-5]
+        element = ArbitraryElement(
+            name="ArbitraryElement", 
+            thickness=elem_params["thickness"], 
+            elem_map=elem_params["elem_map"], 
+            gap_map=elem_params["gap_map"], 
+            x=opt_x_full
+        )
+
+        I_mc = mc_propagate_accumulate_intensity(
+            u_init_func=gaussian_source,
+            u_init_func_args=(args[4],),
+            prop_func=propagate_z1_arbg_z2,
+            prop_func_args=(args[3], element),
+            n=args[5],
+            z=args[2],
+            sim_params=sim_params
         )
         weights_t = sim_params.weights.view(-1, 1, 1)
-        I_opt = torch.sum(I_opt * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
+        I_opt = torch.sum(I_mc * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
     else:
         input_modes = args[-2]
         input_eigen_vals = args[-1]
