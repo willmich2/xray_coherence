@@ -198,7 +198,7 @@ def forward_model_focus_incoherent_mc_power(
         u_init_func=gaussian_source,
         u_init_func_args=(rsrc,),
         prop_func=propagate_z1_arbg_z2,
-        prop_func_args=(element, z2),
+        prop_func_args=(z2, element),
         n=nmc,
         z=z1,
         sim_params=sim_params
