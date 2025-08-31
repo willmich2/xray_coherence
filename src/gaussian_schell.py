@@ -4,7 +4,7 @@ import scipy.special # type: ignore
 from scipy.special import eval_hermite, gammaln # type: ignore
 from src.simparams import SimParams
 
-torch.pi = torch.acos(torch.zeros(1)).item() * 2
+torch.pi = torch.acos(torch.zeros(1, dtype=torch.float64, device=torch.device("cuda"))).item() * 2
 
 def gaussian_schell_propagate_accumulate_intensity(
     sim_params: SimParams,
