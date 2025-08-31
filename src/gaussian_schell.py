@@ -4,6 +4,8 @@ import scipy.special # type: ignore
 from scipy.special import eval_hermite, gammaln # type: ignore
 from src.simparams import SimParams
 
+torch.pi = torch.acos(torch.zeros(1)).item() * 2
+
 def gaussian_schell_propagate_accumulate_intensity(
     sim_params: SimParams,
     lc: float,
@@ -35,12 +37,12 @@ def psi_n(
 
     n_col = narr[:, None]
 
-    const_factor = ((2 * c) / np.pi)**0.25
+    const_factor = ((2 * c) / torch.pi)**0.25
     
-    log_n_factor = -0.5 * (n_col * torch.log(2) + gammaln(n_col + 1))
+    log_n_factor = -0.5 * (n_col * torch.log(torch.tensor(2, dtype=torch.float64, device=narr.device)) + gammaln(n_col + 1))
     n_factor = torch.exp(log_n_factor, dtype=torch.float64)
 
-    x_scaled = x * np.sqrt(2 * c)
+    x_scaled = x * torch.sqrt(torch.tensor(2 * c, dtype=torch.float64, device=narr.device))
     hermite_term = eval_hermite(n_col, x_scaled)
 
     exp_term = torch.exp(-c * x**2)
