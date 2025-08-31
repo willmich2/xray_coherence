@@ -1,7 +1,7 @@
 import torch # type: ignore
 import numpy as np # type: ignore
 import scipy.special # type: ignore
-from src.util import eval_hermite, gammaln
+from scipy.special import eval_hermite, gammaln # type: ignore
 from src.simparams import SimParams
 
 def gaussian_schell_propagate_accumulate_intensity(
