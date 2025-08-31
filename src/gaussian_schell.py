@@ -39,7 +39,7 @@ def psi_n(
 
     const_factor = ((2 * c) / torch.pi)**0.25
     
-    log_n_factor = -0.5 * (n_col * torch.log(torch.tensor(2, dtype=torch.float64, device=narr.device)) + gammaln(n_col + 1))
+    log_n_factor = -0.5 * (n_col * torch.log(torch.tensor(2, dtype=torch.float64, device=narr.device)) + gammaln(n_col.cpu() + 1))
     n_factor = torch.exp(log_n_factor)
 
     x_scaled = x * torch.sqrt(torch.tensor(2 * c, dtype=torch.float64, device=narr.device))
