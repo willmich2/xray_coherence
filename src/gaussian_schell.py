@@ -43,7 +43,7 @@ def psi_n(
     n_factor = torch.exp(log_n_factor)
 
     x_scaled = x * torch.sqrt(torch.tensor(2 * c, dtype=torch.float64, device=narr.device))
-    hermite_term = eval_hermite(n_col.cpu(), x_scaled.cpu())
+    hermite_term = torch.tensor(eval_hermite(n_col.cpu(), x_scaled.cpu()), dtype=torch.float64, device=narr.device)
 
     exp_term = torch.exp(-c * x**2)
 
