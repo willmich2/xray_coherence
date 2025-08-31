@@ -216,6 +216,50 @@ def forward_model_focus_incoherent_mc_power(
     return obj
 
 
+def forward_model_focus_incoherent_gaussian_schell_power(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    opt_params: dict,
+    elem_params: dict,
+    Ncenter: int,
+    z1: float, 
+    z2: float, 
+    rsrc: float, 
+    lc: float
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the power within a center region of the output field.
+    """
+    # concatenate x and a backwards version of x
+    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    n = opt_params["n"]
+    x_opt = torch.repeat_interleave(x_dbl, n)
+    x_opt = x_opt.reshape(1, x_opt.shape[0])
+
+    element = ArbitraryElement(
+        name="ArbitraryElement", 
+        thickness=elem_params["thickness"], 
+        elem_map=elem_params["elem_map"], 
+        gap_map=elem_params["gap_map"], 
+        x=x_opt
+    )
+
+    I_mc = gaussian_schell_propagate_accumulate_intensity(
+
+    )
+
+    # calculated intensity by summing over wavelengths, weighted by weights
+    weights_t = sim_params.weights.view(-1, 1, 1)
+    I_out = torch.sum(I_mc * weights_t, dim=0).reshape(sim_params.Nx)
+    del I_mc
+    
+    P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
+
+    obj = P_out_center
+
+    return obj
+
 
 
 def propagate_z_arbg_z_incoherent(
