@@ -59,9 +59,9 @@ def lambda_n(
     c = (a**2 + 2*a*b)**(1/2)
 
     const = torch.tensor((np.pi / (a + b + c))**(1/2), dtype=torch.float64, device=narr.device).unsqueeze(-1)
-    exp = (b / (a + b + c)).pow(narr)
+    exp = torch.tensor(b / (a + b + c), dtype=torch.float64, device=narr.device).pow(narr)
     lam_arr = const * exp
     max_arr = torch.max(lam_arr, dim=1).values
-        
+
     norm_arr = lam_arr / max_arr
     return norm_arr
