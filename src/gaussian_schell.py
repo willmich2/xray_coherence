@@ -41,6 +41,7 @@ def gaussian_schell_propagate_accumulate_intensity(
             del u_final
 
         i_final += i_wvl * sim_params.weights[wvl]
+        del i_wvl
     
     return i_final
 
