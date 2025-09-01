@@ -3,27 +3,42 @@ import numpy as np # type: ignore
 import scipy.special # type: ignore
 from scipy.special import eval_hermite, gammaln # type: ignore
 from src.simparams import SimParams
+from src.propagation import propagate_z
+from src.elements import ArbitraryElement
 
 torch.pi = torch.acos(torch.zeros(1, dtype=torch.float64, device=torch.device("cuda"))).item() * 2
 
 def gaussian_schell_propagate_accumulate_intensity(
     sim_params: SimParams,
-    lc: float,
-    rsrc: float,
+    lam_n: torch.Tensor,
+    psi_n: torch.Tensor,
     z1: float,
     z2: float, 
-    nmax: int
+    element: ArbitraryElement
 ) -> torch.Tensor:
     """
-    Propagate a Gaussian Schell-model source through a distance z, apply an arbitrary element, and propagate a distance z again.
+    Propagate a Gaussian Schell-model source through a distance z1, apply an arbitrary element, and propagate a distance z2.
     """
-    n = torch.arange(nmax)
-    x = sim_params.x
-    lam_n = lambda_n(rsrc, lc, n, tensor_3D=True)
-    psi_n = psi_n(rsrc, lc, n, x)
+    n = lam_n.shape[0]
+    i_final = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=torch.float32, device=sim_params.device)
 
-    return True
+    for wvl in range(sim_params.weights.shape[0]):
+        i_wvl = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=torch.float32, device=sim_params.device)
+        sim_params_wvl = sim_params.copy()
+        sim_params_wvl.lams = sim_params.lams[wvl].unsqueeze(0)
+        sim_params_wvl.weights = sim_params.weights[wvl].unsqueeze(0)
+        for i in range(n):
+            u_init = psi_n[i, :, :]
+            assert u_init.shape[0] == 1, "u_init must be a single wavelength"
+            u_z1 = propagate_z(u_init, z1, sim_params_wvl)
+            u_z1g = element.apply_element(u_z1, sim_params_wvl)
+            u_final = propagate_z(u_z1g, z2, sim_params_wvl)
 
+            i_wvl += torch.abs(u_final * lam_n[i])**2
+
+        i_final += i_wvl * sim_params.weights[wvl]
+    
+    return i_final
 
 def psi_n(
     rsrc: float, 
@@ -49,7 +64,7 @@ def psi_n(
 
     phi = const_factor * n_factor * hermite_term * exp_term
 
-    return phi
+    return phi.unsqueeze(1)
 
 def lambda_n(
     rsrc: float, 

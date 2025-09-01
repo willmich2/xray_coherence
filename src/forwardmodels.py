@@ -4,6 +4,7 @@ from src.sources import plane_wave, gaussian_source
 from src.elements import ArbitraryElement, RectangularAperture
 from src.simparams import SimParams
 from src.montecarlo import mc_propagate_accumulate_intensity
+from src.gaussian_schell import gaussian_schell_propagate_accumulate_intensity
 
 # TODO: 
 # - [] probably get rid of mc_propagate since we are modeling incoherence with the OTF
@@ -224,8 +225,8 @@ def forward_model_focus_incoherent_gaussian_schell_power(
     Ncenter: int,
     z1: float, 
     z2: float, 
-    rsrc: float, 
-    lc: float
+    lam_n: torch.Tensor,
+    psi_n: torch.Tensor
     ) -> float:
     """
     Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
@@ -245,14 +246,14 @@ def forward_model_focus_incoherent_gaussian_schell_power(
         x=x_opt
     )
 
-    I_mc = gaussian_schell_propagate_accumulate_intensity(
-
+    I_out = gaussian_schell_propagate_accumulate_intensity(
+        sim_params=sim_params,
+        lam_n=lam_n,
+        psi_n=psi_n,
+        z1=z1,
+        z2=z2,
+        element=element
     )
-
-    # calculated intensity by summing over wavelengths, weighted by weights
-    weights_t = sim_params.weights.view(-1, 1, 1)
-    I_out = torch.sum(I_mc * weights_t, dim=0).reshape(sim_params.Nx)
-    del I_mc
     
     P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
 
