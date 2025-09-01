@@ -151,6 +151,7 @@ def x_I_opt(
         )
         weights_t = sim_params.weights.view(-1, 1, 1)
         I_opt = torch.sum(I_mc * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
+
     elif fwd_model == forward_model_focus_incoherent_gaussian_schell_power:
         element = ArbitraryElement(
             name="ArbitraryElement", 
@@ -166,7 +167,7 @@ def x_I_opt(
             z1=args[2],
             z2=args[3],
             element=element
-        )
+        ).reshape(sim_params.Nx).detach().cpu().numpy()
     else:
         input_modes = args[-2]
         input_eigen_vals = args[-1]
