@@ -28,11 +28,11 @@ def gaussian_schell_propagate_accumulate_intensity(
         sim_params_wvl.lams = sim_params.lams[wvl].unsqueeze(0)
         sim_params_wvl.weights = sim_params.weights[wvl].unsqueeze(0)
         for i in range(n):
-            u_init = psi_n[i, :, :]
+            u_init = psi_n[i, :, :].unsqueeze(0)
             assert u_init.shape[0] == 1, "u_init must be a single wavelength"
             u_z1 = propagate_z(u_init, z1, sim_params_wvl)
             u_z1g = element.apply_element(u_z1, sim_params_wvl)
-            u_final = propagate_z(u_z1g, z2, sim_params_wvl)
+            u_final = propagate_z(u_z1g, z2, sim_params_wvl).squeeze(0)
 
             i_wvl += torch.abs(u_final * lam_n[i])**2
 
