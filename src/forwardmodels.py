@@ -261,6 +261,57 @@ def forward_model_focus_incoherent_gaussian_schell_power(
 
     return obj
 
+def forward_model_focus_incoherent_psf_power(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    opt_params: dict,
+    elem_params: dict,
+    Ncenter: int,
+    z1: float, 
+    z2: float, 
+    rsrc: float 
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the power within a center region of the output field.
+    """
+    # concatenate x and a backwards version of x
+    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    n = opt_params["n"]
+    x_opt = torch.repeat_interleave(x_dbl, n)
+    x_opt = x_opt.reshape(1, x_opt.shape[0])
+
+    element = ArbitraryElement(
+        name="ArbitraryElement", 
+        thickness=elem_params["thickness"], 
+        elem_map=elem_params["elem_map"], 
+        gap_map=elem_params["gap_map"], 
+        x=x_opt
+    )
+
+    u_src = gaussian_source(sim_params, rsrc)
+
+    psf_intensity = propagate_z1_arbg_z2(
+        U = u_src, 
+        z1 = z1, 
+        sim_params = sim_params, 
+        z2 = z2,
+        element = element
+    ).abs().pow(2)
+
+
+    u_src_intensity = u_src.abs().pow(2)
+    u_src_intensity_FT = torch.fft.fft(u_src_intensity)
+    psf_intensity_FT = torch.fft.fft(psf_intensity)
+
+    u_final = torch.roll(torch.fft.ifft(psf_intensity_FT * u_src_intensity_FT), shifts=-(sim_params.Nx//2), dims=-1)
+
+    I_out = u_final.abs().pow(2)
+    P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
+
+    obj = P_out_center
+
+    return obj
 
 
 def propagate_z_arbg_z_incoherent(
