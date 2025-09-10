@@ -161,7 +161,7 @@ def x_I_opt(
             x=opt_x_full
         )
 
-        I_opt = intensity_incoherent_psf(sim_params, element, args[2], args[3], args[4])
+        I_opt = intensity_incoherent_psf(sim_params, element, args[2], args[3], args[4]).reshape(sim_params.Nx).detach().cpu().numpy()
 
     elif fwd_model == forward_model_focus_incoherent_gaussian_schell_power:
         element = ArbitraryElement(
