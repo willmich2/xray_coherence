@@ -4,7 +4,7 @@ import nlopt # type: ignore
 from typing import Callable
 from src.inversedesign_utils import create_objective_function, heaviside_projection
 from src.simparams import SimParams
-from src.forwardmodels import field_z_arbg_z, field_z_arbg_z_mode, forward_model_focus_plane_wave_power, forward_model_focus_incoherent_mc_power, propagate_z1_arbg_z2, forward_model_focus_incoherent_gaussian_schell_power
+from src.forwardmodels import field_z_arbg_z, field_z_arbg_z_mode, forward_model_focus_plane_wave_power, forward_model_focus_incoherent_mc_power, propagate_z1_arbg_z2, forward_model_focus_incoherent_gaussian_schell_power, forward_model_focus_incoherent_psf_power, intensity_incoherent_psf
 from src.elements import ArbitraryElement
 from src.sources import gaussian_source
 from src.montecarlo import mc_propagate_accumulate_intensity
@@ -151,6 +151,17 @@ def x_I_opt(
         )
         weights_t = sim_params.weights.view(-1, 1, 1)
         I_opt = torch.sum(I_mc * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
+
+    elif fwd_model == forward_model_focus_incoherent_psf_power:
+        element = ArbitraryElement(
+            name="ArbitraryElement", 
+            thickness=elem_params["thickness"], 
+            elem_map=elem_params["elem_map"], 
+            gap_map=elem_params["gap_map"], 
+            x=opt_x_full
+        )
+
+        I_opt = intensity_incoherent_psf(sim_params, element, args[2], args[3], args[4])
 
     elif fwd_model == forward_model_focus_incoherent_gaussian_schell_power:
         element = ArbitraryElement(

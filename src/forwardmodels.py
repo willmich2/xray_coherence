@@ -261,6 +261,38 @@ def forward_model_focus_incoherent_gaussian_schell_power(
 
     return obj
 
+
+def intensity_incoherent_psf(
+    sim_params: SimParams,
+    element: ArbitraryElement,
+    z1: float, 
+    z2: float, 
+    rsrc: float 
+):
+    u_point = torch.zeros((sim_params.weights.shape[0], sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
+    u_point[:, 0, sim_params.Nx // 2] = 1.0
+
+    u_src = gaussian_source(sim_params, rsrc)
+
+    psf_intensity = propagate_z1_arbg_z2(
+        U = u_point, 
+        z1 = z1, 
+        sim_params = sim_params, 
+        z2 = z2,
+        element = element
+    ).abs().pow(2)
+
+    u_src_intensity = u_src.abs().pow(2)
+    u_src_intensity_FT = torch.fft.fft(u_src_intensity)
+    psf_intensity_FT = torch.fft.fft(psf_intensity)
+
+    u_final = torch.roll(torch.fft.ifft(psf_intensity_FT * u_src_intensity_FT), shifts=-(sim_params.Nx//2), dims=-1)
+
+    I_final = u_final.abs().pow(2)
+    I_out = torch.sum(I_final * sim_params.weights.unsqueeze(-1).unsqueeze(-1), dim=0).reshape(sim_params.Nx)
+    return I_out
+
+
 def forward_model_focus_incoherent_psf_power(
     x: torch.Tensor, 
     sim_params: SimParams,
@@ -289,24 +321,7 @@ def forward_model_focus_incoherent_psf_power(
         x=x_opt
     )
 
-    u_src = gaussian_source(sim_params, rsrc)
-
-    psf_intensity = propagate_z1_arbg_z2(
-        U = u_src, 
-        z1 = z1, 
-        sim_params = sim_params, 
-        z2 = z2,
-        element = element
-    ).abs().pow(2)
-
-
-    u_src_intensity = u_src.abs().pow(2)
-    u_src_intensity_FT = torch.fft.fft(u_src_intensity)
-    psf_intensity_FT = torch.fft.fft(psf_intensity)
-
-    u_final = torch.roll(torch.fft.ifft(psf_intensity_FT * u_src_intensity_FT), shifts=-(sim_params.Nx//2), dims=-1)
-
-    I_out = u_final.abs().pow(2)
+    I_out = intensity_incoherent_psf(sim_params, element, z1, z2, rsrc)
     P_out_center = I_out[I_out.shape[0]//2 - Ncenter//2:I_out.shape[0]//2 + Ncenter//2].sum()
 
     obj = P_out_center
