@@ -293,6 +293,46 @@ def intensity_incoherent_psf(
     return I_out
 
 
+def forward_model_focus_incoherent_psf_ratio(
+    x: torch.Tensor, 
+    sim_params: SimParams,
+    opt_params: dict,
+    elem_params: dict,
+    Ncenter: int,
+    z1: float, 
+    z2: float, 
+    rsrc: float 
+    ) -> float:
+    """
+    Propagate a plane wave a distance z, apply an arbitrary element, and propagate a distance z again.
+    Then, calculate the power within a center region of the output field.
+    """
+    # concatenate x and a backwards version of x
+    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    n = opt_params["n"]
+    x_opt = torch.repeat_interleave(x_dbl, n)
+    x_opt = x_opt.reshape(1, x_opt.shape[0])
+
+    element = ArbitraryElement(
+        name="ArbitraryElement", 
+        thickness=elem_params["thickness"], 
+        elem_map=elem_params["elem_map"], 
+        gap_map=elem_params["gap_map"], 
+        x=x_opt
+    )
+
+    I_out = intensity_incoherent_psf(sim_params, element, z1, z2, rsrc)
+    left_edge = I_out.shape[0]//2 - Ncenter//2
+    right_edge = I_out.shape[0]//2 + Ncenter//2
+    P_out_center = I_out[left_edge:right_edge].sum()
+
+    P_out_edge = I_out[:left_edge].sum() + I_out[right_edge:].sum()
+
+    obj = P_out_center / P_out_edge
+
+    return obj
+
+
 def forward_model_focus_incoherent_psf_power(
     x: torch.Tensor, 
     sim_params: SimParams,
