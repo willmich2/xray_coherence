@@ -267,7 +267,8 @@ def intensity_incoherent_psf(
     element: ArbitraryElement,
     z1: float, 
     z2: float, 
-    rsrc: float 
+    rsrc: float, 
+    norm_psf: bool = True
 ):
     u_point = torch.zeros((sim_params.weights.shape[0], sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
     u_point[:, 0, sim_params.Nx // 2] = 1.0
@@ -282,7 +283,8 @@ def intensity_incoherent_psf(
         element = element
     ).abs().pow(2)
 
-    psf_intensity /= psf_intensity.sum()
+    if norm_psf:
+        psf_intensity /= psf_intensity.sum()
 
     u_src_intensity = u_src.abs().pow(2)
     u_src_intensity_FT = torch.fft.fft(u_src_intensity)
