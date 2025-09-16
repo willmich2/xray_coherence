@@ -282,6 +282,8 @@ def intensity_incoherent_psf(
         element = element
     ).abs().pow(2)
 
+    psf_intensity /= psf_intensity.sum()
+
     u_src_intensity = u_src.abs().pow(2)
     u_src_intensity_FT = torch.fft.fft(u_src_intensity)
     psf_intensity_FT = torch.fft.fft(psf_intensity)
