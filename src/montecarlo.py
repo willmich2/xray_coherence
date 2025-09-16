@@ -42,15 +42,19 @@ def mc_propagate_accumulate_intensity(
 
     for i in range(n):
         i_i = torch.zeros((sim_params.Ny, sim_params.Nx), dtype=torch.float32, device=sim_params.device)
+        sim_params_i = sim_params.copy()
+        # the specific values of lams and weights are not important for the initial field, only the shapes matter
+        sim_params_i.lams = sim_params.lams[0].unsqueeze(0)
+        sim_params_i.weights = sim_params.weights[0].unsqueeze(0)
+        u_init_i = u_init_func(sim_params_i, *u_init_func_args)
+
         for wvl in range(sim_params.weights.shape[0]):
             sim_params_wvl = sim_params.copy()
             sim_params_wvl.lams = sim_params.lams[wvl].unsqueeze(0)
             sim_params_wvl.weights = sim_params.weights[wvl].unsqueeze(0)
 
-            u_init = u_init_func(sim_params_wvl, *u_init_func_args)
-            assert u_init.shape[0] == 1, "u_init must be a single wavelength"
-            u_final = prop_func(u_init, z, sim_params_wvl, *prop_func_args).reshape(sim_params.Ny, sim_params.Nx)
-            del u_init
+            assert u_init_i.shape[0] == 1, "u_init must be a single wavelength"
+            u_final = prop_func(u_init_i, z, sim_params_wvl, *prop_func_args).reshape(sim_params.Ny, sim_params.Nx)
 
             i_i += torch.abs(u_final)**2 * sim_params.weights[wvl]
 
