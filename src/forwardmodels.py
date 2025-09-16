@@ -288,9 +288,8 @@ def intensity_incoherent_psf(
     u_src_intensity_FT = torch.fft.fft(u_src_intensity)
     psf_intensity_FT = torch.fft.fft(psf_intensity)
 
-    u_final = torch.roll(torch.fft.ifft(psf_intensity_FT * u_src_intensity_FT), shifts=-(sim_params.Nx//2), dims=-1)
+    I_final = torch.roll(torch.fft.ifft(psf_intensity_FT * u_src_intensity_FT), shifts=-(sim_params.Nx//2), dims=-1).real
 
-    I_final = u_final.abs().pow(2)
     I_out = torch.sum(I_final * sim_params.weights.unsqueeze(-1).unsqueeze(-1), dim=0).reshape(sim_params.Nx)
     return I_out
 
