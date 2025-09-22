@@ -1,7 +1,7 @@
 import time
 import copy
 import numpy as np # type: ignore
-import datetime
+from datetime import datetime
 from src.threshold_opt import x_I_opt
 
 
