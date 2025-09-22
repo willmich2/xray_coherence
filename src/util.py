@@ -40,59 +40,8 @@ w_mass_att_coeffs = np.array([
        2.552e+00, 1.175e+01, 7.810e+00, 4.438e+00, 1.481e+00, 7.844e-01
 ]) * 1930 # convert to m^-1
 
+
 def kramers_law_weights(
-        e_min: float,
-        e_max: float,
-        N: int,
-        filter_weights: bool = True,
-        filter_thickness: float = 1e-3,
-        filter_material: str = "al",
-        uniform_energy: bool = True, # if True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
-        device: torch.device = torch.device("cpu")
-) -> Tuple[np.ndarray, np.ndarray]: 
-    """
-    Calculate the spectral weights according to Kramer's law. The input energies are in eV and 
-    the output should be wavelengths and weights in inverse meters.
-    """
-    # convert to angular frequencies    
-    h = 4.135667696e-15 # eV s
-    c = 299792458 # m/s
-    lam_min = h * c / e_max
-    lam_max = h * c / e_min
-
-    # if uniform_energy is True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
-    if uniform_energy:
-        energies  = np.linspace(e_min, e_max, N)
-        lams = h * c / energies
-        weights = e_max / energies - 1
-        if filter_weights:
-            if filter_material == "al":
-                interp_coeffs = np.interp(energies, al_data_energies, al_mass_att_coeffs)
-            elif filter_material == "w":
-                interp_coeffs = np.interp(energies, w_data_energies, w_mass_att_coeffs)
-                weights = np.exp(-filter_thickness*interp_coeffs) * weights
-    else:
-        lams = np.linspace(lam_min, lam_max, N)
-        weights = (lams / lam_min - 1) / lams**2
-        if filter_weights:
-            if filter_material == "al":
-                al_data_lams = np.flip(h * c / al_data_energies)
-                interp_coeffs = np.interp(lams, al_data_lams, al_mass_att_coeffs)
-                weights = np.exp(-filter_thickness*interp_coeffs) * weights
-            elif filter_material == "w":
-                w_data_lams = np.flip(h * c / w_data_energies)
-                interp_coeffs = np.interp(lams, w_data_lams, w_mass_att_coeffs)
-                weights = np.exp(-filter_thickness*interp_coeffs) * weights
-    # ensure weights sum to 1
-    weights /= np.sum(weights)
-#     # if a weight is less than weight_cutoff, remove it from the list
-#     lams = lams[weights > weight_cutoff]
-#     weights = weights[weights > weight_cutoff]
-
-    return torch.tensor(lams, dtype=torch.float32, device=device), torch.tensor(weights, dtype=torch.float32, device=device)
-
-
-def kramers_law_weights_downsample(
         e_min: float,
         e_max: float,
         N: int,
