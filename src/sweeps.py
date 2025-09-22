@@ -75,6 +75,10 @@ def threshold_opt_iterative(design_dicts):
 def get_formatted_datetime():
     now = datetime.now()
     formatted_datetime = now.strftime("%Y-%m-%d %H.%M.%S")
+    # remove dashes and periods
+    formatted_datetime = formatted_datetime.replace("-", "").replace(".", "")
+    # replace colons with underscores
+    formatted_datetime = formatted_datetime.replace(":", "_")
     return formatted_datetime
 
 
@@ -92,8 +96,7 @@ def threshold_opt_sweep_save(design_dicts, sweep_func, path_string=""):
 
     for arr, string in zip([opt_xs, opt_x_fulls, opt_Is, opt_objs, obj_values, x_values], ["xs", "x_fulls", "Is", "objs", "obj_values", "x_values"]):
         file_path = f'{base_dir}/{string}'
-            # np.save(file_path, arr, allow_pickle=True)
         np.savez(file_path, *arr)
     
-    dict_file_path = f'/home/gridsan/wmichaels/opt_out/{path_id}_dict'
+    dict_file_path = f'{base_dir}/dict'
     np.save(dict_file_path, design_dicts)
