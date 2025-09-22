@@ -60,29 +60,57 @@ def kramers_law_weights(
     lam_min = h * c / e_max
     lam_max = h * c / e_min
 
-    # if uniform_energy is True, the energy is sampled uniformly, otherwise the wavelength is sampled uniformly
+    # Build a dense spectrum first, then downsample centered around the central wavelength
+    dense_N = max(2048, 10 * max(1, N))
+
     if uniform_energy:
-        energies  = np.linspace(e_min, e_max, N)
-        lams = h * c / energies
-        weights = e_max / energies - 1
+        energies_dense = np.linspace(e_min, e_max, dense_N)
+        lams_dense = h * c / energies_dense
+        weights_dense = e_max / energies_dense - 1
         if filter_weights:
             if filter_material == "al":
-                interp_coeffs = np.interp(energies, al_data_energies, al_mass_att_coeffs)
+                interp_coeffs = np.interp(energies_dense, al_data_energies, al_mass_att_coeffs)
+                weights_dense = np.exp(-filter_thickness * interp_coeffs) * weights_dense
             elif filter_material == "w":
-                interp_coeffs = np.interp(energies, w_data_energies, w_mass_att_coeffs)
-                weights = np.exp(-filter_thickness*interp_coeffs) * weights
+                interp_coeffs = np.interp(energies_dense, w_data_energies, w_mass_att_coeffs)
+                weights_dense = np.exp(-filter_thickness * interp_coeffs) * weights_dense
+        lams_dense = np.flip(lams_dense) if lams_dense[0] > lams_dense[-1] else lams_dense
+        weights_dense = weights_dense[::-1] if lams_dense[0] > lams_dense[-1] else weights_dense
     else:
-        lams = np.linspace(lam_min, lam_max, N)
-        weights = (lams / lam_min - 1) / lams**2
+        lams_dense = np.linspace(lam_min, lam_max, dense_N)
+        weights_dense = (lams_dense / lam_min - 1) / lams_dense**2
         if filter_weights:
             if filter_material == "al":
                 al_data_lams = np.flip(h * c / al_data_energies)
-                interp_coeffs = np.interp(lams, al_data_lams, al_mass_att_coeffs)
-                weights = np.exp(-filter_thickness*interp_coeffs) * weights
+                interp_coeffs = np.interp(lams_dense, al_data_lams, al_mass_att_coeffs)
+                weights_dense = np.exp(-filter_thickness * interp_coeffs) * weights_dense
             elif filter_material == "w":
                 w_data_lams = np.flip(h * c / w_data_energies)
-                interp_coeffs = np.interp(lams, w_data_lams, w_mass_att_coeffs)
-                weights = np.exp(-filter_thickness*interp_coeffs) * weights
+                interp_coeffs = np.interp(lams_dense, w_data_lams, w_mass_att_coeffs)
+                weights_dense = np.exp(-filter_thickness * interp_coeffs) * weights_dense
+
+    # Normalize dense weights
+    weights_dense = weights_dense / np.sum(weights_dense)
+
+    # Determine central wavelength and center index on dense grid
+    lam_center = 0.5 * (lam_min + lam_max)
+    center_idx = int(np.argmin(np.abs(lams_dense - lam_center)))
+
+    if N == 1:
+        lams = np.array([lams_dense[center_idx]])
+        weights = np.array([1.0])
+    else:
+        # Choose a regular step and start so samples are centered around lam_center
+        step = max(1, int(np.floor(dense_N / N)))
+        if N % 2 == 1:
+            start = center_idx - (N // 2) * step
+        else:
+            start = int(np.round(center_idx - (N - 1) * 0.5 * step))
+        start = max(0, min(start, dense_N - 1 - (N - 1) * step))
+        idxs = start + step * np.arange(N)
+        idxs = np.clip(idxs, 0, dense_N - 1).astype(int)
+        lams = lams_dense[idxs]
+        weights = weights_dense[idxs]
     # ensure weights sum to 1
     weights /= np.sum(weights)
 #     # if a weight is less than weight_cutoff, remove it from the list
