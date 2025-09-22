@@ -92,8 +92,8 @@ def kramers_law_weights(
     # Normalize dense weights
     weights_dense = weights_dense / np.sum(weights_dense)
 
-    # Determine central wavelength and center index on dense grid
-    lam_center = 0.5 * (lam_min + lam_max)
+    # lam_center is wavelength of maximum weight
+    lam_center = lams_dense[np.argmax(weights_dense)]
     center_idx = int(np.argmin(np.abs(lams_dense - lam_center)))
 
     if N == 1:
