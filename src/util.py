@@ -126,8 +126,6 @@ def kramers_law_weights_downsample(
             elif filter_material == "w":
                 interp_coeffs = np.interp(energies_dense, w_data_energies, w_mass_att_coeffs)
                 weights_dense = np.exp(-filter_thickness * interp_coeffs) * weights_dense
-        lams_dense = np.flip(lams_dense) if lams_dense[0] > lams_dense[-1] else lams_dense
-        weights_dense = weights_dense[::-1] if lams_dense[0] > lams_dense[-1] else weights_dense
     else:
         lams_dense = np.linspace(lam_min, lam_max, dense_N)
         weights_dense = (lams_dense / lam_min - 1) / lams_dense**2
