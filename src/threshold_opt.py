@@ -20,9 +20,13 @@ def threshold_opt(
     method,
     x_init: np.ndarray, 
     print_results: bool = True  
-    ) -> np.ndarray:
+    ) -> tuple[np.ndarray, list[float], list[np.ndarray]]:
 
     # compiled_model = torch.compile(forward_model, mode="default")
+    
+    # Initialize lists to track objective values and parameter vectors
+    obj_values = []
+    x_values = []
 
     for stage_idx, beta_val in enumerate(beta_schedule, 1):
         if print_results:
@@ -32,14 +36,24 @@ def threshold_opt(
         n = x_init.shape[0]
         opt = nlopt.opt(method, n)
         
-        # Set objective function for this stage, using the current beta
-        opt.set_max_objective(create_objective_function(
+        # Create the base objective function for this stage
+        base_obj_func = create_objective_function(
             beta=beta_val, 
             forward_model=forward_model, 
             sim_params=sim_params, 
             opt_params=opt_params, 
             forward_model_args=forward_model_args
-            ))
+            )
+        
+        # Create a wrapper that tracks objective values and parameter vectors
+        def tracking_objective_function(x, grad):
+            obj_val = base_obj_func(x, grad)
+            obj_values.append(obj_val)
+            x_values.append(x.copy())  # Make a copy to avoid reference issues
+            return obj_val
+        
+        # Set the tracking objective function
+        opt.set_max_objective(tracking_objective_function)
         
         # Optional bounds (could also be unbounded or partially bounded)
         opt.set_lower_bounds([0.0] * n)
@@ -55,17 +69,19 @@ def threshold_opt(
         # Perform the optimization
         x_init = opt.optimize(x_init)
 
-        final_obj = create_objective_function(
-            beta=beta_val, 
-            forward_model=forward_model, 
-            sim_params=sim_params, 
-            opt_params=opt_params, 
-            forward_model_args=forward_model_args
-            )(x_init, np.array([]))
+        final_obj = opt.last_optimum_value()
+
+        # final_obj = create_objective_function(
+        #     beta=beta_val, 
+        #     forward_model=forward_model, 
+        #     sim_params=sim_params, 
+        #     opt_params=opt_params, 
+        #     forward_model_args=forward_model_args
+        #     )(x_init, np.array([]))
         if print_results:
             print(f"Stage {stage_idx} finished. obj = {(final_obj):.4f}")
     
-    return x_init
+    return x_init, obj_values, x_values
 
 
 def x_I_opt(
@@ -83,7 +99,7 @@ def x_I_opt(
     betas = opt_params["betas"]
     max_eval = opt_params["max_eval"]
     
-    opt_x = threshold_opt(
+    opt_x, obj_values, x_values = threshold_opt(
         sim_params = sim_params, 
         opt_params = opt_params,
         forward_model = fwd_model, 
@@ -200,4 +216,4 @@ def x_I_opt(
     opt_x = opt_x_proj.detach().cpu().numpy()
     opt_x_full = opt_x_full.detach().cpu().numpy()
             
-    return opt_x, opt_x_full, I_opt, final_obj
+    return opt_x, opt_x_full, I_opt, final_obj, obj_values, x_values
