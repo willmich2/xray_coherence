@@ -1,4 +1,5 @@
 import time
+import os
 import copy
 import numpy as np # type: ignore
 from datetime import datetime
@@ -86,8 +87,11 @@ def threshold_opt_sweep_save(design_dicts, sweep_func, path_string=""):
     else:
         path_id = path_string + end_time
     
+    base_dir = f'/home/gridsan/wmichaels/opt_out/{path_id}'
+    os.makedirs(base_dir, exist_ok=True)
+
     for arr, string in zip([opt_xs, opt_x_fulls, opt_Is, opt_objs, obj_values, x_values], ["xs", "x_fulls", "Is", "objs", "obj_values", "x_values"]):
-        file_path = f'/home/gridsan/wmichaels/opt_out/{path_id}_{string}'
+        file_path = f'{base_dir}/{string}'
             # np.save(file_path, arr, allow_pickle=True)
         np.savez(file_path, *arr)
     
