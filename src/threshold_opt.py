@@ -80,6 +80,10 @@ def threshold_opt(
         #     )(x_init, np.array([]))
         if print_results:
             print(f"Stage {stage_idx} finished. obj = {(final_obj):.4f}")
+
+    # convert to numpy arrays
+    obj_values = np.array(obj_values)
+    x_values = np.array(x_values)
     
     return x_init, obj_values, x_values
 

@@ -14,14 +14,14 @@ def threshold_opt_sweep(design_dicts):
     x_values = []
     start_time = time.time()
     for i, design_dict in enumerate(design_dicts):
-        opt_x, opt_x_full, opt_I, opt_obj, obj_values, x_values = x_I_opt(design_dict)
+        opt_x, opt_x_full, opt_I, opt_obj, obj_vals, x_vals = x_I_opt(design_dict)
         
         opt_xs.append(opt_x)
         opt_x_fulls.append(opt_x_full)
         opt_Is.append(opt_I)
         opt_objs.append(opt_obj)
-        obj_values.append(obj_values)
-        x_values.append(x_values)
+        obj_values.append(obj_vals)
+        x_values.append(x_vals)
 
         curr_time = time.time()
         print(f"finished design dict {i}")
@@ -38,28 +38,30 @@ def threshold_opt_iterative(design_dicts):
     opt_objs = []
     obj_values = []
     x_values = []
+
     start_time = time.time()
     for i, design_dict in enumerate(design_dicts):
         
         if i == 0:
-            opt_x, opt_x_full, opt_I, opt_obj, obj_values, x_values = x_I_opt(design_dict)
+            opt_x, opt_x_full, opt_I, opt_obj, obj_vals, x_vals = x_I_opt(design_dict)
         else: 
             design_dict_diffx = copy.deepcopy(design_dict) 
             design_dict_diffx["x_init"] = opt_xs[-1]
-            opt_x, opt_x_full, opt_I, opt_obj, obj_values, x_values = x_I_opt(design_dict)
+            opt_x, opt_x_full, opt_I, opt_obj, obj_vals, x_vals = x_I_opt(design_dict)
         
         opt_xs.append(opt_x)
         opt_x_fulls.append(opt_x_full)
         opt_Is.append(opt_I)
         opt_objs.append(opt_obj)
-        obj_values.append(obj_values)
-        x_values.append(x_values)
+        obj_values.append(obj_vals)
+        x_values.append(x_vals)
+
         del opt_x
         del opt_x_full
         del opt_I
         del opt_obj
-        del obj_values
-        del x_values
+        del obj_vals
+        del x_vals
 
         curr_time = time.time()
         print(f"finished design dict {i}")
