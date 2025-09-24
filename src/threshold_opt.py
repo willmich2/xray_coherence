@@ -86,9 +86,9 @@ def threshold_opt_iterative(
     ) -> tuple[np.ndarray, list[float], list[np.ndarray]]:
     design_dicts = get_iterative_wavelength_design_dicts(design_dict)
     
-    for d_dict in design_dicts:
+    for dict_i in design_dicts:
         opt_x, obj_values, x_values = threshold_opt(
-            design_dict=d_dict,
+            design_dict=dict_i,
             print_results=print_results
         )
 
@@ -109,8 +109,8 @@ def x_I_opt(
     opt_func = opt_params["opt_func"]
 
     opt_x, obj_values, x_values = opt_func(
-        design_dict=design_dict,
-        print_results=False
+        design_dict,
+        False
     )
 
     final_obj = fwd_model(torch.tensor(opt_x), sim_params, opt_params, *args).cpu().numpy()
