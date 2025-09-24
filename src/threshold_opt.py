@@ -82,7 +82,7 @@ def threshold_opt(
 
 def threshold_opt_iterative(
     design_dict: dict,
-    print_results: bool = True
+    print_results: bool
     ) -> tuple[np.ndarray, list[float], list[np.ndarray]]:
     design_dicts = get_iterative_wavelength_design_dicts(design_dict)
     
