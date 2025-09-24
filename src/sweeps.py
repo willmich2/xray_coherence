@@ -79,6 +79,8 @@ def get_formatted_datetime():
     formatted_datetime = formatted_datetime.replace("-", "").replace(".", "")
     # replace colons with underscores
     formatted_datetime = formatted_datetime.replace(":", "_")
+    # remove spaces
+    formatted_datetime = formatted_datetime.replace(" ", "_")
     return formatted_datetime
 
 

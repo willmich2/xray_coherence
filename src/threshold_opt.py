@@ -2,23 +2,12 @@ import numpy as np # type: ignore
 import torch # type: ignore
 import nlopt # type: ignore
 from typing import Callable
-from src.inversedesign_utils import create_objective_function, heaviside_projection
+from src.inversedesign_utils import create_objective_function, heaviside_projection, get_iterative_wavelength_design_dicts
 from src.simparams import SimParams
-from src.forwardmodels import field_z_arbg_z, field_z_arbg_z_mode, forward_model_focus_plane_wave_power, forward_model_focus_incoherent_mc_power, propagate_z1_arbg_z2, forward_model_focus_incoherent_gaussian_schell_power, forward_model_focus_incoherent_psf_power, intensity_incoherent_psf, forward_model_focus_incoherent_psf_ratio
-from src.elements import ArbitraryElement
-from src.sources import gaussian_source
-from src.montecarlo import mc_propagate_accumulate_intensity
-from src.gaussian_schell import gaussian_schell_propagate_accumulate_intensity
+
 
 def threshold_opt(
-    sim_params: SimParams, 
-    opt_params: dict,
-    forward_model: Callable,
-    forward_model_args: tuple,
-    beta_schedule: list[float], 
-    max_eval_per_stage: int, 
-    method,
-    x_init: np.ndarray, 
+    design_dict: dict,
     print_results: bool = True  
     ) -> tuple[np.ndarray, list[float], list[np.ndarray]]:
 
@@ -27,6 +16,16 @@ def threshold_opt(
     # Initialize lists to track objective values and parameter vectors
     obj_values = []
     x_values = []
+
+    # Unpack the design dictionary
+    sim_params: SimParams = design_dict["sim_params"]
+    opt_params: dict = design_dict["opt_params"]
+    forward_model: Callable = opt_params["forward_model"]
+    forward_model_args: tuple = design_dict["args"]
+    beta_schedule: list[float] = opt_params["betas"]
+    max_eval_per_stage: int = opt_params["max_eval"]
+    method = opt_params["method"]
+    x_init: np.ndarray = opt_params["x_init"]
 
     for stage_idx, beta_val in enumerate(beta_schedule, 1):
         if print_results:
@@ -81,6 +80,22 @@ def threshold_opt(
     return x_init, obj_values, x_values
 
 
+def threshold_opt_iterative(
+    design_dict: dict,
+    print_results: bool = True
+    ) -> tuple[np.ndarray, list[float], list[np.ndarray]]:
+    design_dicts = get_iterative_wavelength_design_dicts(design_dict)
+    
+    for d_dict in design_dicts:
+        opt_x, obj_values, x_values = threshold_opt(
+            design_dict=d_dict,
+            print_results=print_results
+        )
+
+    # return the final opt_x, obj_values, x_values
+    return opt_x, obj_values, x_values
+
+
 def x_I_opt(
         design_dict: dict, 
         ) -> tuple[np.ndarray, np.ndarray, float]:
@@ -89,24 +104,14 @@ def x_I_opt(
     opt_params = design_dict["opt_params"]
     args = design_dict["args"]
 
-    x_init = opt_params["x_init"]
     fwd_model = opt_params["forward_model"]
-    
-    method = opt_params["method"]
-    betas = opt_params["betas"]
-    max_eval = opt_params["max_eval"]
-    
-    opt_x, obj_values, x_values = threshold_opt(
-        sim_params = sim_params, 
-        opt_params = opt_params,
-        forward_model = fwd_model, 
-        forward_model_args = args, 
-        beta_schedule = betas, 
-        max_eval_per_stage = max_eval, 
-        method = method,
-        x_init = x_init, 
-        print_results = False
-        )
+
+    opt_func = opt_params["opt_func"]
+
+    opt_x, obj_values, x_values = opt_func(
+        design_dict=design_dict,
+        print_results=False
+    )
 
     final_obj = fwd_model(torch.tensor(opt_x), sim_params, opt_params, *args).cpu().numpy()
     
@@ -114,7 +119,7 @@ def x_I_opt(
     
     init_params = SimParams(
         Ny=1, 
-        Nx=x_init.shape[0]*2, 
+        Nx=opt_params["x_init"].shape[0]*2, 
         dx=sim_params.dx*opt_params["n"],
         device=sim_params.device, 
         dtype=sim_params.dtype,
