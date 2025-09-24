@@ -4,7 +4,7 @@ import nlopt # type: ignore
 from typing import Callable
 from src.inversedesign_utils import create_objective_function, heaviside_projection, get_iterative_wavelength_design_dicts
 from src.simparams import SimParams
-
+import copy
 
 def threshold_opt(
     design_dict: dict,
@@ -85,11 +85,21 @@ def threshold_opt_iterative_wavelength(
     print_results: bool
     ) -> tuple[np.ndarray, list[float], list[np.ndarray]]:
     design_dicts = get_iterative_wavelength_design_dicts(design_dict)
+
+    n = len(design_dicts)
     
-    for dict_i in design_dicts:
-        opt_x, obj_values, x_values = threshold_opt(
-            dict_i,
-            print_results
+    for i in range(n):
+        if i == 0:
+            opt_x, obj_values, x_values = threshold_opt(
+                design_dict=design_dicts[i],
+                print_results=print_results
+            )
+        else:
+            design_dict_i = copy.deepcopy(design_dicts[i])
+            design_dict_i["x_init"] = opt_x
+            opt_x, obj_values, x_values = threshold_opt(
+            design_dict=design_dicts[i],
+            print_results=print_results
         )
 
     # return the final opt_x, obj_values, x_values
