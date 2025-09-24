@@ -119,8 +119,6 @@ def kramers_law_weights(
     return torch.tensor(lams, dtype=torch.float32, device=device), torch.tensor(weights, dtype=torch.float32, device=device)
 
 
-
-
 def quasi_monochromatic_spectrum(
         central_energy_ev: float, 
         N: int, 

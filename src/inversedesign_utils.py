@@ -3,6 +3,7 @@ import numpy as np # type: ignore
 from typing import Callable
 from src.simparams import SimParams
 from src.elements import ZonePlate
+import copy
 
 def create_objective_function(
     beta: float, 
@@ -71,3 +72,20 @@ def zp_init(
     zp_init = torch.where(zp_trans > 0.5, 1.0, 0.0).cpu().reshape(sim_params.Nx)[::opt_params["n"]]
     zp_init = zp_init[:zp_init.shape[0]//2].numpy()
     return zp_init
+
+
+def get_iterative_wavelength_design_dicts(design_dict):
+    lams, weights = design_dict["sim_params"].lams, design_dict["sim_params"].weights
+    Nwvl = lams.shape[0]
+    design_dicts = []
+
+    for i in range(Nwvl):
+        design_dict_i = copy.deepcopy(design_dict)
+        # choose central i+1 wavelengths
+        slc = slice(Nwvl // 2 - (i+1)//2, Nwvl // 2 + (i+1)//2)
+        lams_i = lams[slc]
+        weights_i = weights[slc]
+        design_dict_i["sim_params"].lams = lams_i
+        design_dict_i["sim_params"].weights = weights_i
+        design_dicts.append(design_dict_i)
+    return design_dicts
