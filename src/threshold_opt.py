@@ -88,8 +88,8 @@ def threshold_opt_iterative(
     
     for dict_i in design_dicts:
         opt_x, obj_values, x_values = threshold_opt(
-            design_dict=dict_i,
-            print_results=print_results
+            dict_i,
+            print_results
         )
 
     # return the final opt_x, obj_values, x_values
