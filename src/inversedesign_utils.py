@@ -82,7 +82,7 @@ def get_iterative_wavelength_design_dicts(design_dict):
     for i in range(Nwvl):
         design_dict_i = copy.deepcopy(design_dict)
         # choose central i+1 wavelengths
-        slc = slice(Nwvl // 2 - (i+1)//2, Nwvl // 2 + (i+1)//2)
+        slc = slice(Nwvl // 2 - (i+1)//2, Nwvl // 2 + (i+2)//2)
         lams_i = lams[slc]
         weights_i = weights[slc]
         design_dict_i["sim_params"].lams = lams_i
