@@ -80,7 +80,7 @@ def threshold_opt(
     return x_init, obj_values, x_values
 
 
-def threshold_opt_iterative(
+def threshold_opt_iterative_wavelength(
     design_dict: dict,
     print_results: bool
     ) -> tuple[np.ndarray, list[float], list[np.ndarray]]:
