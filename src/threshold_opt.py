@@ -71,13 +71,6 @@ def threshold_opt(
 
         final_obj = opt.last_optimum_value()
 
-        # final_obj = create_objective_function(
-        #     beta=beta_val, 
-        #     forward_model=forward_model, 
-        #     sim_params=sim_params, 
-        #     opt_params=opt_params, 
-        #     forward_model_args=forward_model_args
-        #     )(x_init, np.array([]))
         if print_results:
             print(f"Stage {stage_idx} finished. obj = {(final_obj):.4f}")
 
@@ -140,82 +133,12 @@ def x_I_opt(
     pad_right = sim_params.Nx - opt_x_full.shape[1] - pad_left
     opt_x_full = torch.nn.functional.pad(opt_x_full, (pad_left, pad_right, 0, 0))
 
-    if fwd_model == forward_model_focus_plane_wave_power:
-    
-        U_opt = field_z_arbg_z(
-            x = opt_x_full, 
-            sim_params = sim_params, 
-            elem_params = elem_params, 
-            z = args[-1]
-            )
+    # Use a generic hook on the forward model to compute intensity without branching.
+    compute_intensity = getattr(fwd_model, "compute_intensity", None)
+    if compute_intensity is None:
+        raise ValueError("Selected forward model does not provide compute_intensity(x_full, sim_params, elem_params, args)")
 
-        weights_t = sim_params.weights.view(-1, 1, 1)
-        I_opt = torch.sum((U_opt.abs()**2) * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
-    elif fwd_model == forward_model_focus_incoherent_mc_power:
-        element = ArbitraryElement(
-            name="ArbitraryElement", 
-            thickness=elem_params["thickness"], 
-            elem_map=elem_params["elem_map"], 
-            gap_map=elem_params["gap_map"], 
-            x=opt_x_full
-        )
-
-        I_mc = mc_propagate_accumulate_intensity(
-            u_init_func=gaussian_source,
-            u_init_func_args=(args[4],),
-            prop_func=propagate_z1_arbg_z2,
-            prop_func_args=(args[3], element),
-            n=args[5],
-            z=args[2],
-            sim_params=sim_params
-        )
-        weights_t = sim_params.weights.view(-1, 1, 1)
-        I_opt = torch.sum(I_mc * weights_t, dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
-
-    elif fwd_model == forward_model_focus_incoherent_psf_power or fwd_model == forward_model_focus_incoherent_psf_ratio:
-        element = ArbitraryElement(
-            name="ArbitraryElement", 
-            thickness=elem_params["thickness"], 
-            elem_map=elem_params["elem_map"], 
-            gap_map=elem_params["gap_map"], 
-            x=opt_x_full
-        )
-
-        I_opt = intensity_incoherent_psf(sim_params, element, args[2], args[3], args[4]).reshape(sim_params.Nx).detach().cpu().numpy()
-
-    elif fwd_model == forward_model_focus_incoherent_gaussian_schell_power:
-        element = ArbitraryElement(
-            name="ArbitraryElement", 
-            thickness=elem_params["thickness"], 
-            elem_map=elem_params["elem_map"], 
-            gap_map=elem_params["gap_map"], 
-            x=opt_x_full
-        )
-        I_opt = gaussian_schell_propagate_accumulate_intensity(
-            sim_params=sim_params,
-            lam_n=args[4],
-            psi_n=args[5],
-            z1=args[2],
-            z2=args[3],
-            element=element
-        ).reshape(sim_params.Nx).detach().cpu().numpy()
-    else:
-        input_modes = args[-2]
-        input_eigen_vals = args[-1]
-        Nmodes = input_modes.shape[0]
-        output_modes = torch.zeros((Nmodes, sim_params.weights.shape[0], sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
-
-        for i in range(Nmodes):
-            Uzgz = field_z_arbg_z_mode(opt_x_full, input_modes[i], sim_params, elem_params, args[2])
-            output_modes[i] = Uzgz
-
-        output_modes = output_modes.transpose(0, 1)
-        input_eigen_vals = input_eigen_vals.transpose(0, 1)
-        
-        I_arr = torch.sum(output_modes.abs().pow(2)*(input_eigen_vals.unsqueeze(-1).unsqueeze(-1)), dim=1)
-        I_opt = torch.sum(I_arr * sim_params.weights.unsqueeze(-1).unsqueeze(-1), dim=0).reshape(sim_params.Nx).detach().cpu().numpy()
-        del output_modes
-        del I_arr
+    I_opt = compute_intensity(opt_x_full, sim_params, elem_params, args).reshape(sim_params.Nx).detach().cpu().numpy()
         
     opt_x = opt_x_proj.detach().cpu().numpy()
     opt_x_full = opt_x_full.detach().cpu().numpy()

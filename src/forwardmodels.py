@@ -487,6 +487,99 @@ def forward_model_focus_point_source_power(
 
     return obj.real
 
+#
+# Generic intensity computation hooks for use by visualization/utilities.
+# Each forward model below is given a `compute_intensity(x_full, sim_params, elem_params, args)`
+# attribute that produces the output intensity for a fully constructed design `x_full`.
+
+def _compute_intensity_plane_wave_power(x_full: torch.Tensor, sim_params: SimParams, elem_params: dict, args: tuple) -> torch.Tensor:
+    U_opt = field_z_arbg_z(
+        x = x_full,
+        sim_params = sim_params,
+        elem_params = elem_params,
+        z = args[-1]
+    )
+    weights_t = sim_params.weights.view(-1, 1, 1)
+    return torch.sum((U_opt.abs()**2) * weights_t, dim=0).reshape(sim_params.Nx)
+
+forward_model_focus_plane_wave_power.compute_intensity = _compute_intensity_plane_wave_power  # type: ignore[attr-defined]
+
+
+def _compute_intensity_incoherent_mc(x_full: torch.Tensor, sim_params: SimParams, elem_params: dict, args: tuple) -> torch.Tensor:
+    element = ArbitraryElement(
+        name="ArbitraryElement",
+        thickness=elem_params["thickness"],
+        elem_map=elem_params["elem_map"],
+        gap_map=elem_params["gap_map"],
+        x=x_full
+    )
+    I_mc = mc_propagate_accumulate_intensity(
+        u_init_func=gaussian_source,
+        u_init_func_args=(args[4],),
+        prop_func=propagate_z1_arbg_z2,
+        prop_func_args=(args[3], element),
+        n=args[5],
+        z=args[2],
+        sim_params=sim_params
+    )
+    weights_t = sim_params.weights.view(-1, 1, 1)
+    return torch.sum(I_mc * weights_t, dim=0).reshape(sim_params.Nx)
+
+forward_model_focus_incoherent_mc_power.compute_intensity = _compute_intensity_incoherent_mc  # type: ignore[attr-defined]
+
+
+def _compute_intensity_incoherent_psf(x_full: torch.Tensor, sim_params: SimParams, elem_params: dict, args: tuple) -> torch.Tensor:
+    element = ArbitraryElement(
+        name="ArbitraryElement",
+        thickness=elem_params["thickness"],
+        elem_map=elem_params["elem_map"],
+        gap_map=elem_params["gap_map"],
+        x=x_full
+    )
+    return intensity_incoherent_psf(sim_params, element, args[2], args[3], args[4]).reshape(sim_params.Nx)
+
+forward_model_focus_incoherent_psf_power.compute_intensity = _compute_intensity_incoherent_psf  # type: ignore[attr-defined]
+forward_model_focus_incoherent_psf_ratio.compute_intensity = _compute_intensity_incoherent_psf  # type: ignore[attr-defined]
+
+
+def _compute_intensity_gaussian_schell(x_full: torch.Tensor, sim_params: SimParams, elem_params: dict, args: tuple) -> torch.Tensor:
+    element = ArbitraryElement(
+        name="ArbitraryElement",
+        thickness=elem_params["thickness"],
+        elem_map=elem_params["elem_map"],
+        gap_map=elem_params["gap_map"],
+        x=x_full
+    )
+    return gaussian_schell_propagate_accumulate_intensity(
+        sim_params=sim_params,
+        lam_n=args[4],
+        psi_n=args[5],
+        z1=args[2],
+        z2=args[3],
+        element=element
+    ).reshape(sim_params.Nx)
+
+forward_model_focus_incoherent_gaussian_schell_power.compute_intensity = _compute_intensity_gaussian_schell  # type: ignore[attr-defined]
+
+
+def _compute_intensity_point_source_modes(x_full: torch.Tensor, sim_params: SimParams, elem_params: dict, args: tuple) -> torch.Tensor:
+    input_modes = args[-2]
+    input_eigen_vals = args[-1]
+    Nmodes = input_modes.shape[0]
+    output_modes = torch.zeros((Nmodes, sim_params.weights.shape[0], sim_params.Ny, sim_params.Nx), dtype=sim_params.dtype, device=sim_params.device)
+    for i in range(Nmodes):
+        Uzgz = field_z_arbg_z_mode(x_full, input_modes[i], sim_params, elem_params, args[2])
+        output_modes[i] = Uzgz
+    output_modes = output_modes.transpose(0, 1)
+    input_eigen_vals = input_eigen_vals.transpose(0, 1)
+    I_arr = torch.sum(output_modes.abs().pow(2)*(input_eigen_vals.unsqueeze(-1).unsqueeze(-1)), dim=1)
+    I_opt = torch.sum(I_arr * sim_params.weights.unsqueeze(-1).unsqueeze(-1), dim=0).reshape(sim_params.Nx)
+    del output_modes
+    del I_arr
+    return I_opt
+
+forward_model_focus_point_source_power.compute_intensity = _compute_intensity_point_source_modes  # type: ignore[attr-defined]
+
 
 ## these are old functions that are not used anymore (maybe delete)
 
