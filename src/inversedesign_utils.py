@@ -22,6 +22,11 @@ def create_objective_function(
         # Convert to PyTorch tensor
         g = torch.tensor(x, dtype=zero.real.dtype, requires_grad=True)
 
+        if g.dim() == 1:
+            g = g.unsqueeze(0).unsqueeze(0)
+        elif g.dim() == 2:
+            g = g.unsqueeze(1) # Assume (batch, length) -> (batch, channels, length)
+
         # apply density filtering
         g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
 
@@ -29,7 +34,7 @@ def create_objective_function(
         g_thresholded = heaviside_projection(g_filtered, beta=beta)
 
         # enforce feature size
-        g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
+        g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params).squeeze(0).squeeze(0)
 
         # Evaluate forward model
         obj = forward_model(g_physical, sim_params, opt_params, *forward_model_args)
