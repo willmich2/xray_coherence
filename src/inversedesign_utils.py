@@ -4,6 +4,7 @@ from typing import Callable
 from src.simparams import SimParams
 from src.elements import ZonePlate
 import copy
+import torch.nn.functional as F # type: ignore
 
 def create_objective_function(
     beta: float, 
@@ -21,11 +22,17 @@ def create_objective_function(
         # Convert to PyTorch tensor
         g = torch.tensor(x, dtype=zero.real.dtype, requires_grad=True)
 
+        # apply density filtering
+        g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
+
         # Apply smooth threshold
-        g_thresholded = heaviside_projection(g, beta=beta)
+        g_thresholded = heaviside_projection(g_filtered, beta=beta)
+
+        # enforce feature size
+        g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
 
         # Evaluate forward model
-        obj = forward_model(g_thresholded, sim_params, opt_params, *forward_model_args)
+        obj = forward_model(g_physical, sim_params, opt_params, *forward_model_args)
 
         # If NLopt wants gradients:
         if grad.size > 0:
@@ -36,6 +43,52 @@ def create_objective_function(
 
         return obj.item()
     return objective_function
+
+
+def density_filtering(
+    x: torch.Tensor,
+    filter_radius: float,
+    sim_params: SimParams
+) -> torch.Tensor:
+
+    fiter_radius_int = int(filter_radius / sim_params.dx)
+    kernel_size_filter = 2 * fiter_radius_int + 1
+    # Create a 1D cone filter kernel
+    cone_kernel = torch.tensor([1.0 - abs(i - fiter_radius_int) / (fiter_radius_int + 1)
+                                for i in range(kernel_size_filter)],
+                               device=x.device, dtype=x.dtype)
+    cone_kernel = cone_kernel.view(1, 1, -1) / cone_kernel.sum()
+    # Apply convolution
+    x_filtered = F.conv1d(x, cone_kernel, padding='same')
+    return x_filtered
+
+
+def feature_size_filtering(
+    x: torch.Tensor,
+    min_feature_radius: float,
+    sim_params: SimParams
+) -> torch.Tensor:
+
+    min_feature_radius_int = int(min_feature_radius / sim_params.dx)    
+    kernel_size_morph = 2 * min_feature_radius_int + 1
+    padding_morph = min_feature_radius_int
+
+    # Erosion is equivalent to a min-pooling operation
+    x_eroded = -F.max_pool1d(-x,
+                             kernel_size=kernel_size_morph,
+                             stride=1,
+                             padding=padding_morph)
+
+    # Dilation is equivalent to a max-pooling operation
+    x_dilated = F.max_pool1d(x_eroded,
+                             kernel_size=kernel_size_morph,
+                             stride=1,
+                             padding=padding_morph)
+
+    # The final design to be used in the physics simulation
+    x_physical = x_dilated
+
+    return x_physical
 
 
 def heaviside_projection(
