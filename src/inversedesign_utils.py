@@ -27,75 +27,25 @@ def create_objective_function(
         elif g.dim() == 2:
             g = g.unsqueeze(1) # Assume (batch, length) -> (batch, channels, length)
 
-        # Test without filtering functions first
-        print("Testing without filtering functions...")
-        g_test = g.squeeze(0).squeeze(0)
-        print(f"g_test requires_grad: {g_test.requires_grad}, grad_fn: {g_test.grad_fn}")
-        
-        # Try forward model directly
-        obj_test = forward_model(g_test, sim_params, opt_params, *forward_model_args)
-        print(f"obj_test requires_grad: {obj_test.requires_grad}, grad_fn: {obj_test.grad_fn}")
-        
-        # Test gradient computation without filtering
-        if grad.size > 0:
-            obj_test.backward(retain_graph=True)
-            print(f"g.grad after direct forward model: {g.grad is not None}")
-            if g.grad is not None:
-                print("Direct forward model works! The issue is in the filtering functions.")
-            else:
-                print("Direct forward model also fails - issue is in forward_model itself")
-        
-        # Now try with filtering functions
-        print("\nTesting with filtering functions...")
         # apply density filtering
         g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
-        print(f"g_filtered requires_grad: {g_filtered.requires_grad}, grad_fn: {g_filtered.grad_fn}")
 
         # Apply smooth threshold
         g_thresholded = heaviside_projection(g_filtered, beta=beta)
-        print(f"g_thresholded requires_grad: {g_thresholded.requires_grad}, grad_fn: {g_thresholded.grad_fn}")
 
         # enforce feature size
         g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
         g_physical = g_physical.squeeze(0).squeeze(0)
-        print(f"g_physical requires_grad: {g_physical.requires_grad}, grad_fn: {g_physical.grad_fn}")
 
         # Evaluate forward model
         obj = forward_model(g_physical, sim_params, opt_params, *forward_model_args)
-        print(f"obj requires_grad: {obj.requires_grad}, grad_fn: {obj.grad_fn}")
 
         # If NLopt wants gradients:
         if grad.size > 0:
             # Backprop in PyTorch
             obj.backward()
-            print(f"g.grad is None: {g.grad is None}")
-            if g.grad is not None:
-                print(f"g.grad shape: {g.grad.shape}")
-                # Copy gradients back to NLopt array
-                grad[:] = g.grad.detach().numpy()
-            else:
-                # If gradient is None, try to compute it manually
-                print("Warning: g.grad is None, attempting manual gradient computation")
-                # Create a new tensor with the same shape as the original input
-                g_manual = torch.tensor(x, dtype=zero.real.dtype, requires_grad=True)
-                if g_manual.dim() == 1:
-                    g_manual = g_manual.unsqueeze(0).unsqueeze(0)
-                elif g_manual.dim() == 2:
-                    g_manual = g_manual.unsqueeze(1)
-                
-                # Recompute the forward pass
-                g_filtered_manual = density_filtering(g_manual, opt_params["filter_radius"], sim_params)
-                g_thresholded_manual = heaviside_projection(g_filtered_manual, beta=beta)
-                g_physical_manual = feature_size_filtering(g_thresholded_manual, opt_params["min_feature_radius"], sim_params)
-                g_physical_manual = g_physical_manual.squeeze(0).squeeze(0)
-                obj_manual = forward_model(g_physical_manual, sim_params, opt_params, *forward_model_args)
-                
-                obj_manual.backward()
-                if g_manual.grad is not None:
-                    grad[:] = g_manual.grad.detach().numpy()
-                else:
-                    print("Error: Manual gradient computation also failed")
-                    grad[:] = 0.0  # Fallback to zero gradients
+            # Copy gradients back to NLopt array
+            grad[:] = g.grad.detach().numpy()
 
         return obj.item()
     return objective_function

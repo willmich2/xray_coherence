@@ -147,7 +147,7 @@ def forward_model_focus_plane_wave_power(
     Then, calculate the power within a center region of the output field.
     """
     # concatenate x and a backwards version of x
-    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
     x_opt = x_opt.reshape(1, x_opt.shape[0])
@@ -182,7 +182,7 @@ def forward_model_focus_incoherent_mc_power(
     Then, calculate the power within a center region of the output field.
     """
     # concatenate x and a backwards version of x
-    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
     x_opt = x_opt.reshape(1, x_opt.shape[0])
@@ -233,7 +233,7 @@ def forward_model_focus_incoherent_gaussian_schell_power(
     Then, calculate the power within a center region of the output field.
     """
     # concatenate x and a backwards version of x
-    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
     x_opt = x_opt.reshape(1, x_opt.shape[0])
@@ -311,7 +311,7 @@ def forward_model_focus_incoherent_psf_ratio(
     Then, calculate the power within a center region of the output field.
     """
     # concatenate x and a backwards version of x
-    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
     x_opt = x_opt.reshape(1, x_opt.shape[0])
@@ -351,7 +351,7 @@ def forward_model_focus_incoherent_psf_power(
     Then, calculate the power within a center region of the output field.
     """
     # concatenate x and a backwards version of x
-    x_dbl = torch.cat((x, x[torch.arange(x.numel() - 1, -1, -1)]))
+    x_dbl = torch.cat((x, torch.flip(x, dims=(0,))))
     n = opt_params["n"]
     x_opt = torch.repeat_interleave(x_dbl, n)
     x_opt = x_opt.reshape(1, x_opt.shape[0])
