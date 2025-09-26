@@ -36,7 +36,8 @@ def create_objective_function(
         print(f"g_thresholded requires_grad: {g_thresholded.requires_grad}, grad_fn: {g_thresholded.grad_fn}")
 
         # enforce feature size
-        g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params).squeeze(0).squeeze(0)
+        g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
+        g_physical = g_physical.squeeze(0).squeeze(0)
         print(f"g_physical requires_grad: {g_physical.requires_grad}, grad_fn: {g_physical.grad_fn}")
 
         # Evaluate forward model
@@ -50,8 +51,31 @@ def create_objective_function(
             print(f"g.grad is None: {g.grad is None}")
             if g.grad is not None:
                 print(f"g.grad shape: {g.grad.shape}")
-            # Copy gradients back to NLopt array
-            grad[:] = g.grad.detach().numpy()
+                # Copy gradients back to NLopt array
+                grad[:] = g.grad.detach().numpy()
+            else:
+                # If gradient is None, try to compute it manually
+                print("Warning: g.grad is None, attempting manual gradient computation")
+                # Create a new tensor with the same shape as the original input
+                g_manual = torch.tensor(x, dtype=zero.real.dtype, requires_grad=True)
+                if g_manual.dim() == 1:
+                    g_manual = g_manual.unsqueeze(0).unsqueeze(0)
+                elif g_manual.dim() == 2:
+                    g_manual = g_manual.unsqueeze(1)
+                
+                # Recompute the forward pass
+                g_filtered_manual = density_filtering(g_manual, opt_params["filter_radius"], sim_params)
+                g_thresholded_manual = heaviside_projection(g_filtered_manual, beta=beta)
+                g_physical_manual = feature_size_filtering(g_thresholded_manual, opt_params["min_feature_radius"], sim_params)
+                g_physical_manual = g_physical_manual.squeeze(0).squeeze(0)
+                obj_manual = forward_model(g_physical_manual, sim_params, opt_params, *forward_model_args)
+                
+                obj_manual.backward()
+                if g_manual.grad is not None:
+                    grad[:] = g_manual.grad.detach().numpy()
+                else:
+                    print("Error: Manual gradient computation also failed")
+                    grad[:] = 0.0  # Fallback to zero gradients
 
         return obj.item()
     return objective_function
