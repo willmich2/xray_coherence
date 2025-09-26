@@ -27,6 +27,26 @@ def create_objective_function(
         elif g.dim() == 2:
             g = g.unsqueeze(1) # Assume (batch, length) -> (batch, channels, length)
 
+        # Test without filtering functions first
+        print("Testing without filtering functions...")
+        g_test = g.squeeze(0).squeeze(0)
+        print(f"g_test requires_grad: {g_test.requires_grad}, grad_fn: {g_test.grad_fn}")
+        
+        # Try forward model directly
+        obj_test = forward_model(g_test, sim_params, opt_params, *forward_model_args)
+        print(f"obj_test requires_grad: {obj_test.requires_grad}, grad_fn: {obj_test.grad_fn}")
+        
+        # Test gradient computation without filtering
+        if grad.size > 0:
+            obj_test.backward(retain_graph=True)
+            print(f"g.grad after direct forward model: {g.grad is not None}")
+            if g.grad is not None:
+                print("Direct forward model works! The issue is in the filtering functions.")
+            else:
+                print("Direct forward model also fails - issue is in forward_model itself")
+        
+        # Now try with filtering functions
+        print("\nTesting with filtering functions...")
         # apply density filtering
         g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
         print(f"g_filtered requires_grad: {g_filtered.requires_grad}, grad_fn: {g_filtered.grad_fn}")
