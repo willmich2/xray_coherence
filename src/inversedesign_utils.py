@@ -22,10 +22,10 @@ def create_objective_function(
         # Convert to PyTorch tensor
         g = torch.tensor(x, dtype=zero.real.dtype, requires_grad=True)
 
-        if g.dim() == 1:
-            g = g.unsqueeze(0).unsqueeze(0)
-        elif g.dim() == 2:
-            g = g.unsqueeze(1) # Assume (batch, length) -> (batch, channels, length)
+        # if g.dim() == 1:
+        #     g = g.unsqueeze(0).unsqueeze(0)
+        # elif g.dim() == 2:
+        #     g = g.unsqueeze(1) # Assume (batch, length) -> (batch, channels, length)
 
         # apply density filtering
         # g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
