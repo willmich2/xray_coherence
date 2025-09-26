@@ -29,20 +29,27 @@ def create_objective_function(
 
         # apply density filtering
         g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
+        print(f"g_filtered requires_grad: {g_filtered.requires_grad}, grad_fn: {g_filtered.grad_fn}")
 
         # Apply smooth threshold
         g_thresholded = heaviside_projection(g_filtered, beta=beta)
+        print(f"g_thresholded requires_grad: {g_thresholded.requires_grad}, grad_fn: {g_thresholded.grad_fn}")
 
         # enforce feature size
         g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params).squeeze(0).squeeze(0)
+        print(f"g_physical requires_grad: {g_physical.requires_grad}, grad_fn: {g_physical.grad_fn}")
 
         # Evaluate forward model
         obj = forward_model(g_physical, sim_params, opt_params, *forward_model_args)
+        print(f"obj requires_grad: {obj.requires_grad}, grad_fn: {obj.grad_fn}")
 
         # If NLopt wants gradients:
         if grad.size > 0:
             # Backprop in PyTorch
             obj.backward()
+            print(f"g.grad is None: {g.grad is None}")
+            if g.grad is not None:
+                print(f"g.grad shape: {g.grad.shape}")
             # Copy gradients back to NLopt array
             grad[:] = g.grad.detach().numpy()
 
@@ -78,24 +85,12 @@ def feature_size_filtering(
     kernel_size_morph = 2 * min_feature_radius_int + 1
     padding_morph = min_feature_radius_int
 
-    # Use differentiable approximations instead of true morphological operations
-    # For erosion: use min pooling with a large negative value to approximate min
-    # For dilation: use max pooling (this is already differentiable)
-    
-    # Approximate erosion using min pooling
-    x_eroded = -F.max_pool1d(-x,
+    # Use a single max pooling operation instead of erosion+dilation
+    # This is more gradient-friendly and still enforces minimum feature size
+    x_physical = F.max_pool1d(x,
                              kernel_size=kernel_size_morph,
                              stride=1,
                              padding=padding_morph)
-
-    # Dilation using max pooling (differentiable)
-    x_dilated = F.max_pool1d(x_eroded,
-                             kernel_size=kernel_size_morph,
-                             stride=1,
-                             padding=padding_morph)
-
-    # The final design to be used in the physics simulation
-    x_physical = x_dilated
 
     return x_physical
 
