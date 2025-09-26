@@ -28,14 +28,16 @@ def create_objective_function(
             g = g.unsqueeze(1) # Assume (batch, length) -> (batch, channels, length)
 
         # apply density filtering
-        g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
+        # g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
 
         # Apply smooth threshold
-        g_thresholded = heaviside_projection(g_filtered, beta=beta)
+        g_thresholded = heaviside_projection(g, beta=beta)
 
         # enforce feature size
-        g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
-        g_physical = g_physical.squeeze(0).squeeze(0)
+        # g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
+        # g_physical = g_physical.squeeze(0).squeeze(0)
+
+        g_physical = g_thresholded
 
         # Evaluate forward model
         obj = forward_model(g_physical, sim_params, opt_params, *forward_model_args)
@@ -62,7 +64,7 @@ def density_filtering(
     # Create a 1D cone filter kernel
     cone_kernel = torch.tensor([1.0 - abs(i - fiter_radius_int) / (fiter_radius_int + 1)
                                 for i in range(kernel_size_filter)],
-                               device=x.device, dtype=x.dtype, requires_grad=False)
+                               device=x.device, dtype=x.dtype, requires_grad=True)
     cone_kernel = cone_kernel.view(1, 1, -1) / cone_kernel.sum()
     # Apply convolution
     x_filtered = F.conv1d(x, cone_kernel, padding='same')
@@ -106,12 +108,8 @@ def heaviside_projection(
     Projects continuous x in [0,1] (approximately) 
     into near-binary values using a smooth approximation of a step function.
     """    
-    # Create constants that are part of the computational graph
-    beta_eta = beta * eta
-    beta_one_minus_eta = beta * (1 - eta)
-    
-    numerator = torch.tanh(beta * (x - eta)) + torch.tanh(beta_eta)
-    denominator = torch.tanh(beta_one_minus_eta) + torch.tanh(beta_eta)
+    numerator = torch.tanh(beta * (x - eta)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=x.dtype, requires_grad=True))
+    denominator = torch.tanh(torch.tensor(beta * (1 - eta), device=x.device, dtype=x.dtype, requires_grad=True)) + torch.tanh(torch.tensor(beta * eta, device=x.device, dtype=x.dtype, requires_grad=True))
     return numerator / denominator
 
 
