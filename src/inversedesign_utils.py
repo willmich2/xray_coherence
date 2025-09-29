@@ -10,6 +10,35 @@ from typing import Dict, Tuple
 # Cache for precomputed 1D cone kernels keyed by (radius_int, dtype, device)
 _cone_kernel_cache: Dict[Tuple[int, torch.dtype, torch.device], torch.Tensor] = {}
 
+def _next_power_of_two(n: int) -> int:
+    # Returns the smallest power of two >= n
+    return 1 if n <= 1 else 1 << ((n - 1).bit_length())
+
+def _fft_conv1d_same(x: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
+    """
+    Fast 1D convolution using FFT with 'same' output length as x.
+    x: (N=1, C=1, L)
+    k: (out_channels=1, in_channels=1, K)
+    Returns: (1,1,L)
+    """
+    # Ensure contiguous float tensors
+    x = x.contiguous()
+    k = k.contiguous()
+    L = x.shape[-1]
+    K = k.shape[-1]
+    total_len = L + K - 1
+    nfft = _next_power_of_two(total_len)
+
+    # Compute real FFT along last dim
+    X = torch.fft.rfft(x, n=nfft)
+    H = torch.fft.rfft(k, n=nfft)
+    Y = X * H
+    y_full = torch.fft.irfft(Y, n=nfft)[..., :total_len]
+
+    start = K // 2
+    end = start + L
+    return y_full[..., start:end]
+
 def create_objective_function(
     beta: float, 
     forward_model: Callable, 
@@ -81,8 +110,14 @@ def density_filtering(
             cone_kernel = cone_kernel_1d.view(1, 1, -1).detach()
         _cone_kernel_cache[cache_key] = cone_kernel
 
-    # Apply convolution
-    x_filtered = F.conv1d(x, cone_kernel, padding='same')
+    # Apply convolution (prefer fast integer padding path). For very large kernels,
+    # use FFT-based convolution which is typically faster on CPU and large K.
+    kernel_size = cone_kernel.shape[-1]
+    if kernel_size >= 129:  # heuristic threshold; adjust as needed
+        x_filtered = _fft_conv1d_same(x, cone_kernel)
+    else:
+        padding = filter_radius_int
+        x_filtered = F.conv1d(x, cone_kernel, padding=padding)
     return x_filtered.view(-1)
 
 
