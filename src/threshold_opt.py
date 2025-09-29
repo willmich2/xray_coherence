@@ -80,6 +80,7 @@ def threshold_opt(
     obj_values = np.array(obj_values)
     x_values = np.array(x_values)
 
+    assert base_obj_func(x_init, np.zeros(n)) == final_obj, f"base_obj_func(x_init, np.zeros(n)) {base_obj_func(x_init, np.zeros(n))} and final_obj {final_obj} are not equal"
     # assert final_obj == obj_values[-1], f"final_obj {final_obj} and obj_values[-1] {obj_values[-1]} are not equal"
     # assert x_init == x_values[-1], f"x_init {x_init} and x_values[-1] {x_values[-1]} are not equal"
 
