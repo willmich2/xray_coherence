@@ -5,6 +5,10 @@ from src.simparams import SimParams
 from src.elements import ZonePlate
 import copy
 import torch.nn.functional as F # type: ignore
+from typing import Dict, Tuple
+
+# Cache for precomputed 1D cone kernels keyed by (radius_int, dtype, device)
+_cone_kernel_cache: Dict[Tuple[int, torch.dtype, torch.device], torch.Tensor] = {}
 
 def create_objective_function(
     beta: float, 
@@ -28,10 +32,10 @@ def create_objective_function(
         #     g = g.unsqueeze(1) # Assume (batch, length) -> (batch, channels, length)
 
         # apply density filtering
-        # g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
+        g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
 
         # Apply smooth threshold
-        g_thresholded = heaviside_projection(g, beta=beta)
+        g_thresholded = heaviside_projection(g_filtered, beta=beta)
 
         # enforce feature size
         # g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
@@ -60,17 +64,26 @@ def density_filtering(
 ) -> torch.Tensor:
 
     x = x.reshape(1, 1, -1)
-    fiter_radius_int = int(filter_radius / sim_params.dx)
-    kernel_size_filter = 2 * fiter_radius_int + 1
-    # Create a 1D cone filter kernel
-    cone_kernel = torch.tensor([1.0 - abs(i - fiter_radius_int) / (fiter_radius_int + 1)
-                                for i in range(kernel_size_filter)],
-                               device=x.device, dtype=x.dtype, requires_grad=True)
-    cone_kernel = cone_kernel.view(1, 1, -1) / cone_kernel.sum()
+    filter_radius_int = int(filter_radius / sim_params.dx)
+
+    # Retrieve or build a cached, normalized 1D cone kernel (no grad required)
+    cache_key = (filter_radius_int, x.dtype, x.device)
+    cone_kernel = _cone_kernel_cache.get(cache_key)
+    if cone_kernel is None:
+        kernel_size_filter = 2 * filter_radius_int + 1
+        with torch.no_grad():
+            # 1D triangular (cone) kernel centered at filter_radius_int
+            weights = torch.arange(kernel_size_filter, device=x.device, dtype=x.dtype)
+            distances = (weights - filter_radius_int).abs()
+            cone_kernel_1d = 1.0 - distances / (filter_radius_int + 1)
+            cone_kernel_1d = cone_kernel_1d.clamp(min=0)
+            cone_kernel_1d = cone_kernel_1d / cone_kernel_1d.sum()
+            cone_kernel = cone_kernel_1d.view(1, 1, -1).detach()
+        _cone_kernel_cache[cache_key] = cone_kernel
+
     # Apply convolution
     x_filtered = F.conv1d(x, cone_kernel, padding='same')
-    x_filtered = x_filtered.reshape(-1)
-    return x_filtered
+    return x_filtered.reshape(-1)
 
 
 def feature_size_filtering(
