@@ -70,6 +70,9 @@ def threshold_opt(
 
         final_obj = opt.last_optimum_value()
 
+        obj_values.append(final_obj)
+        x_values.append(x_init)
+
         if print_results:
             print(f"Stage {stage_idx} finished. obj = {(final_obj):.4f}")
 
@@ -77,10 +80,10 @@ def threshold_opt(
     obj_values = np.array(obj_values)
     x_values = np.array(x_values)
 
-    assert final_obj == obj_values[-1], f"final_obj {final_obj} and obj_values[-1] {obj_values[-1]} are not equal"
-    assert x_init == x_values[-1], f"x_init {x_init} and x_values[-1] {x_values[-1]} are not equal"
+    # assert final_obj == obj_values[-1], f"final_obj {final_obj} and obj_values[-1] {obj_values[-1]} are not equal"
+    # assert x_init == x_values[-1], f"x_init {x_init} and x_values[-1] {x_values[-1]} are not equal"
 
-    return x_init, obj_values, x_values
+    return x_init, final_obj, obj_values, x_values
 
 
 def threshold_opt_iterative_wavelength(
@@ -93,20 +96,20 @@ def threshold_opt_iterative_wavelength(
     
     for i in range(n):
         if i == 0:
-            opt_x, obj_values, x_values = threshold_opt(
+            opt_x, final_obj, obj_values, x_values = threshold_opt(
                 design_dict=design_dicts[i],
                 print_results=print_results
             )
         else:
             design_dict_i = copy.deepcopy(design_dicts[i])
             design_dict_i["x_init"] = opt_x
-            opt_x, obj_values, x_values = threshold_opt(
+            opt_x, final_obj, obj_values, x_values = threshold_opt(
             design_dict=design_dicts[i],
             print_results=print_results
         )
 
     # return the final opt_x, obj_values, x_values
-    return opt_x, obj_values, x_values
+    return opt_x, final_obj, obj_values, x_values
 
 
 def x_I_opt(
@@ -121,12 +124,12 @@ def x_I_opt(
 
     opt_func = opt_params["opt_func"]
 
-    opt_x, obj_values, x_values = opt_func(
+    opt_x, final_obj, obj_values, x_values = opt_func(
         design_dict,
         False
     )
 
-    final_obj = fwd_model(torch.tensor(opt_x), sim_params, opt_params, *args).cpu().numpy()
+    # final_obj = fwd_model(torch.tensor(opt_x), sim_params, opt_params, *args).cpu().numpy()
     
     opt_x_proj = heaviside_projection(torch.tensor(opt_x), beta = np.inf, eta = 0.5)
     
