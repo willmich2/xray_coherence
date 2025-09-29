@@ -28,10 +28,10 @@ def create_objective_function(
         #     g = g.unsqueeze(1) # Assume (batch, length) -> (batch, channels, length)
 
         # apply density filtering
-        # g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
+        g_filtered = density_filtering(g, opt_params["filter_radius"], sim_params)
 
         # Apply smooth threshold
-        g_thresholded = heaviside_projection(g, beta=beta)
+        g_thresholded = heaviside_projection(g_filtered, beta=beta)
 
         # enforce feature size
         # g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
