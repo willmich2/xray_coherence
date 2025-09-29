@@ -76,7 +76,9 @@ def threshold_opt(
     # convert to numpy arrays
     obj_values = np.array(obj_values)
     x_values = np.array(x_values)
-    
+
+    assert final_obj == obj_values[-1], f"final_obj {final_obj} and obj_values[-1] {obj_values[-1]} are not equal"
+
     return x_init, obj_values, x_values
 
 
