@@ -63,7 +63,7 @@ def density_filtering(
     sim_params: SimParams
 ) -> torch.Tensor:
 
-    x = x.reshape(1, 1, -1)
+    x = x.view(1, 1, -1)
     filter_radius_int = int(filter_radius / sim_params.dx)
 
     # Retrieve or build a cached, normalized 1D cone kernel (no grad required)
@@ -83,7 +83,7 @@ def density_filtering(
 
     # Apply convolution
     x_filtered = F.conv1d(x, cone_kernel, padding='same')
-    return x_filtered.reshape(-1)
+    return x_filtered.view(-1)
 
 
 def feature_size_filtering(
