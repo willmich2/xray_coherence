@@ -112,9 +112,6 @@ def kramers_law_weights(
         weights = weights_dense[idxs]
     # ensure weights sum to 1
     weights /= np.sum(weights)
-#     # if a weight is less than weight_cutoff, remove it from the list
-#     lams = lams[weights > weight_cutoff]
-#     weights = weights[weights > weight_cutoff]
 
     return torch.tensor(lams, dtype=torch.float32, device=device), torch.tensor(weights, dtype=torch.float32, device=device)
 
@@ -125,26 +122,6 @@ def quasi_monochromatic_spectrum(
         bandwidth: float,
         device: torch.device = torch.device("cpu")
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Generates wavelengths and weights for a quasi-monochromatic spectrum.
-
-    This function is useful for simulations where a narrow, uniform energy band
-    needs to be modeled as a discrete set of wavelengths.
-
-    Args:
-        central_energy_ev (float): The central energy of the spectrum in electron volts (eV).
-        num_wavelengths (int): The number of discrete wavelengths to return.
-                               Must be a positive integer.
-        bandwidth (float): The total relative bandwidth (e.g., 0.01 for 1%).
-                           This is centered around the central energy.
-
-    Returns:
-        tuple[np.ndarray, np.ndarray]: A tuple containing two NumPy arrays:
-            - wavelengths_m: An array of wavelengths in meters.
-            - weights: An array of corresponding spectral weights. Assumes a
-                       uniform (top-hat) distribution, so all weights are equal
-                       and sum to 1.0.
-    """
     h = 4.135667696e-15 # eV s
     c = 299792458 # m/s
 
@@ -164,7 +141,6 @@ def quasi_monochromatic_spectrum(
     weights = np.ones(N) / N # uniform distribution
 
     return torch.tensor(wavelengths_m, dtype=torch.float32, device=device), torch.tensor(weights, dtype=torch.float32, device=device)
-
 
 
 def create_material_map(

@@ -10,9 +10,11 @@ from typing import Dict, Tuple
 # Cache for precomputed 1D cone kernels keyed by (radius_int, dtype, device)
 _cone_kernel_cache: Dict[Tuple[int, torch.dtype, torch.device], torch.Tensor] = {}
 
+
 def _next_power_of_two(n: int) -> int:
     # Returns the smallest power of two >= n
     return 1 if n <= 1 else 1 << ((n - 1).bit_length())
+
 
 def _fft_conv1d_same(x: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
     """
@@ -38,6 +40,7 @@ def _fft_conv1d_same(x: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
     start = K // 2
     end = start + L
     return y_full[..., start:end]
+
 
 def create_objective_function(
     beta: float, 
@@ -95,29 +98,34 @@ def density_filtering(
     x = x.view(1, 1, -1)
     filter_radius_int = int(filter_radius / sim_params.dx)
 
-    # Retrieve or build a cached, normalized 1D cone kernel (no grad required)
-    cache_key = (filter_radius_int, x.dtype, x.device)
-    cone_kernel = _cone_kernel_cache.get(cache_key)
-    if cone_kernel is None:
-        kernel_size_filter = 2 * filter_radius_int + 1
-        with torch.no_grad():
-            # 1D triangular (cone) kernel centered at filter_radius_int
-            weights = torch.arange(kernel_size_filter, device=x.device, dtype=x.dtype)
-            distances = (weights - filter_radius_int).abs()
-            cone_kernel_1d = 1.0 - distances / (filter_radius_int + 1)
-            cone_kernel_1d = cone_kernel_1d.clamp(min=0)
-            cone_kernel_1d = cone_kernel_1d / cone_kernel_1d.sum()
-            cone_kernel = cone_kernel_1d.view(1, 1, -1).detach()
-        _cone_kernel_cache[cache_key] = cone_kernel
+    # # Retrieve or build a cached, normalized 1D cone kernel (no grad required)
+    # cache_key = (filter_radius_int, x.dtype, x.device)
+    # cone_kernel = _cone_kernel_cache.get(cache_key)
+    # if cone_kernel is None:
+    #     kernel_size_filter = 2 * filter_radius_int + 1
+    #     with torch.no_grad():
+    #         # 1D triangular (cone) kernel centered at filter_radius_int
+    #         weights = torch.arange(kernel_size_filter, device=x.device, dtype=x.dtype)
+    #         distances = (weights - filter_radius_int).abs()
+    #         cone_kernel_1d = 1.0 - distances / (filter_radius_int + 1)
+    #         cone_kernel_1d = cone_kernel_1d.clamp(min=0)
+    #         cone_kernel_1d = cone_kernel_1d / cone_kernel_1d.sum()
+    #         cone_kernel = cone_kernel_1d.view(1, 1, -1).detach()
+    #     _cone_kernel_cache[cache_key] = cone_kernel
+
+    kernel_size_filter = 2 * filter_radius_int + 1
+    kernel = torch.ones(kernel_size_filter, device=x.device, dtype=x.dtype)
+    kernel = kernel / kernel.sum()
+    kernel = kernel.view(1, 1, -1)
 
     # Apply convolution (prefer fast integer padding path). For very large kernels,
     # use FFT-based convolution which is typically faster on CPU and large K.
-    kernel_size = cone_kernel.shape[-1]
+    kernel_size = kernel.shape[-1]
     if kernel_size >= 129:  # heuristic threshold; adjust as needed
-        x_filtered = _fft_conv1d_same(x, cone_kernel)
+        x_filtered = _fft_conv1d_same(x, kernel)
     else:
         padding = filter_radius_int
-        x_filtered = F.conv1d(x, cone_kernel, padding=padding)
+        x_filtered = F.conv1d(x, kernel, padding=padding)
     return x_filtered.view(-1)
 
 
