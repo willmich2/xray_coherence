@@ -70,10 +70,8 @@ def create_objective_function(
         g_thresholded = heaviside_projection(g_filtered, beta=beta)
 
         # enforce feature size
-        # g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
-        # g_physical = g_physical.squeeze(0).squeeze(0)
-
-        g_physical = g_thresholded
+        g_physical = feature_size_filtering(g_thresholded, opt_params["min_feature_radius"], sim_params)
+        g_physical = g_physical.view(-1)
 
         # Evaluate forward model
         obj = forward_model(g_physical, sim_params, opt_params, *forward_model_args)
@@ -114,18 +112,23 @@ def density_filtering(
     #     _cone_kernel_cache[cache_key] = cone_kernel
 
     kernel_size_filter = 2 * filter_radius_int + 1
-    kernel = torch.ones(kernel_size_filter, device=x.device, dtype=x.dtype)
-    kernel = kernel / kernel.sum()
-    kernel = kernel.view(1, 1, -1)
+    cone_kernel = torch.tensor([1.0 - abs(i - filter_radius_int) / (filter_radius_int + 1)
+                                for i in range(kernel_size_filter)],
+                               device=x.device, dtype=x.dtype)
+    cone_kernel = cone_kernel.view(1, 1, -1) / cone_kernel.sum()
+
+    # kernel = torch.ones(kernel_size_filter, device=x.device, dtype=x.dtype)
+    # kernel = kernel / kernel.sum()
+    # kernel = kernel.view(1, 1, -1)
 
     # Apply convolution (prefer fast integer padding path). For very large kernels,
     # use FFT-based convolution which is typically faster on CPU and large K.
-    kernel_size = kernel.shape[-1]
+    kernel_size = cone_kernel.shape[-1]
     if kernel_size >= 129:  # heuristic threshold; adjust as needed
-        x_filtered = _fft_conv1d_same(x, kernel)
+        x_filtered = _fft_conv1d_same(x, cone_kernel)
     else:
         padding = filter_radius_int
-        x_filtered = F.conv1d(x, kernel, padding=padding)
+        x_filtered = F.conv1d(x, cone_kernel, padding=padding)
     return x_filtered.view(-1)
 
 
