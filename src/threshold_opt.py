@@ -2,7 +2,7 @@ import numpy as np # type: ignore
 import torch # type: ignore
 import nlopt # type: ignore
 from typing import Callable
-from src.inversedesign_utils import create_objective_function, heaviside_projection, get_iterative_wavelength_design_dicts
+from src.inversedesign_utils import create_objective_function, heaviside_projection, get_iterative_wavelength_design_dicts, density_filtering
 from src.simparams import SimParams
 import copy
 
@@ -103,11 +103,11 @@ def threshold_opt_iterative_wavelength(
             )
         else:
             design_dict_i = copy.deepcopy(design_dicts[i])
-            design_dict_i["x_init"] = opt_x
+            design_dict_i["opt_params"]["x_init"] = opt_x
             opt_x, final_obj, obj_values, x_values = threshold_opt(
-            design_dict=design_dicts[i],
-            print_results=print_results
-        )
+                design_dict=design_dict_i,
+                print_results=print_results
+            )
 
     # return the final opt_x, obj_values, x_values
     return opt_x, final_obj, obj_values, x_values
@@ -130,9 +130,14 @@ def x_I_opt(
         False
     )
 
-    # final_obj = fwd_model(torch.tensor(opt_x), sim_params, opt_params, *args).cpu().numpy()
+    # Apply the same preprocessing steps that were used during optimization
+    opt_x_tensor = torch.tensor(opt_x, dtype=sim_params.dtype, device=sim_params.device)
     
-    opt_x_proj = heaviside_projection(torch.tensor(opt_x), beta = np.inf, eta = 0.5)
+    # Apply density filtering (same as in optimization)
+    opt_x_filtered = density_filtering(opt_x_tensor, opt_params["filter_radius"], sim_params)
+    
+    # Apply hard thresholding with beta = inf (same as final stage of optimization)
+    opt_x_proj = heaviside_projection(opt_x_filtered, beta = np.inf, eta = 0.5)
     
     init_params = SimParams(
         Ny=1, 
@@ -161,6 +166,14 @@ def x_I_opt(
         raise ValueError("Selected forward model does not provide compute_intensity(x_full, sim_params, elem_params, args)")
 
     I_opt = compute_intensity(opt_x_full, sim_params, elem_params, args).reshape(sim_params.Nx).detach().cpu().numpy()
+    
+    # Verify that the recomputed objective function matches final_obj
+    # Use the same preprocessing and forward model as in optimization
+    recomputed_obj = fwd_model(opt_x_proj, sim_params, opt_params, *args)
+    
+    print(f"Final objective from optimization: {final_obj:.6f}")
+    print(f"Recomputed objective function: {recomputed_obj.item():.6f}")
+    print(f"Difference: {abs(final_obj - recomputed_obj.item()):.2e}")
         
     opt_x = opt_x_proj.detach().cpu().numpy()
     opt_x_full = opt_x_full.detach().cpu().numpy()
