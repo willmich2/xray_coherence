@@ -143,6 +143,70 @@ def quasi_monochromatic_spectrum(
     return torch.tensor(wavelengths_m, dtype=torch.float32, device=device), torch.tensor(weights, dtype=torch.float32, device=device)
 
 
+def gaussian_energy_spectrum(
+        central_energy_ev: float,
+        N: int,
+        bandwidth: float,
+        device: torch.device = torch.device("cpu"),
+        window_sigmas: float = 3.0
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Create a spectrum whose weights follow a Gaussian distribution in ENERGY
+    centered at `central_energy_ev`.
+
+    - The Gaussian FWHM in energy is `bandwidth * central_energy_ev`.
+    - Sampling is performed uniformly in energy over +/- `window_sigmas` standard deviations.
+
+    Args:
+        central_energy_ev: Central photon energy in eV.
+        N: Number of discrete samples to return.
+        bandwidth: Fractional FWHM relative to central energy, in (0, 1].
+        device: Torch device for returned tensors.
+        window_sigmas: Half-width of the sampling window, in units of Gaussian sigma.
+
+    Returns:
+        wavelengths_m (torch.Tensor): Shape (N,), wavelengths corresponding to sampled energies.
+        weights (torch.Tensor): Shape (N,), non-negative weights normalized to sum to 1.
+    """
+    h = 4.135667696e-15  # eV s
+    c = 299792458        # m/s
+
+    # Handle trivial cases
+    if N <= 0:
+        return (torch.empty(0, dtype=torch.float32, device=device),
+                torch.empty(0, dtype=torch.float32, device=device))
+
+    if N == 1 or bandwidth <= 0:
+        lam0 = (h * c) / central_energy_ev
+        return (torch.tensor([lam0], dtype=torch.float32, device=device),
+                torch.tensor([1.0], dtype=torch.float32, device=device))
+
+    # Convert FWHM to standard deviation: FWHM = 2*sqrt(2*ln(2)) * sigma
+    fwhm_ev = max(central_energy_ev * bandwidth, 1e-12)
+    sigma_ev = fwhm_ev / (2.0 * np.sqrt(2.0 * np.log(2.0)))
+
+    # Sample energies uniformly over +/- window_sigmas * sigma
+    e_min = max(central_energy_ev - window_sigmas * sigma_ev, 1e-12)
+    e_max = max(central_energy_ev + window_sigmas * sigma_ev, e_min * (1.0 + 1e-9))
+
+    energies_ev = np.linspace(e_min, e_max, N)
+
+    # Gaussian weights in energy
+    weights = np.exp(-0.5 * ((energies_ev - central_energy_ev) / sigma_ev) ** 2)
+    weights_sum = np.sum(weights)
+    if weights_sum <= 0:
+        weights = np.ones_like(weights) / N
+    else:
+        weights = weights / weights_sum
+
+    wavelengths_m = (h * c) / energies_ev
+
+    return (
+        torch.tensor(wavelengths_m, dtype=torch.float32, device=device),
+        torch.tensor(weights, dtype=torch.float32, device=device),
+    )
+
+
 def create_material_map(
         material_name: str, 
 ) -> list[np.ndarray]:

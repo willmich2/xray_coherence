@@ -170,11 +170,7 @@ def x_I_opt(
     # Verify that the recomputed objective function matches final_obj
     # Use the same preprocessing and forward model as in optimization
     recomputed_obj = fwd_model(opt_x_proj, sim_params, opt_params, *args)
-    
-    print(f"Final objective from optimization: {final_obj:.6f}")
-    print(f"Recomputed objective function: {recomputed_obj.item():.6f}")
-    print(f"Difference: {abs(final_obj - recomputed_obj.item()):.2e}")
-        
+            
     opt_x = opt_x_proj.detach().cpu().numpy()
     opt_x_full = opt_x_full.detach().cpu().numpy()
             
